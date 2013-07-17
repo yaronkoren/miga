@@ -1,4 +1,5 @@
-miga
+Miga
 ====
 
-A Javascript application (with some PHP) for viewing and browsing arbitrary structured data
+Miga is a Javascript application (with some PHP) for viewing and browsing
+arbitrary structured data.
