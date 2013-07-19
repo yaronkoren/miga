@@ -1,0 +1,339 @@
+/**
+ * CSS file for the Miga framework.
+ *
+ * @author Yaron Koren
+ */
+
+/* Page-wide values */
+
+body {
+	padding: 15px;
+	font-family: Helvetica,Arial,sans-serif;
+}
+
+a {
+	color: #3B1EE1;
+}
+
+a:active {
+	background: #DDDDDD;
+}
+
+/* Top elements */
+
+div#logoAndIcons {
+	float: left;
+}
+
+div#title {
+	font-size: x-large;
+	padding: 10px;
+	text-align: right;
+}
+
+div#selectedFilters {
+	float: right;
+}
+
+br.separator {
+	clear: both;
+}
+
+table#headerTable {
+	width: 100%;
+}
+
+table#headerTable tr td {
+	vertical-align: top;
+}
+
+ul#selectedFilters {
+	padding: 10px;
+	text-align: right;
+	font-size: large;
+	color: #EA4A15;
+	list-style-type: none;
+}
+
+ul#selectedFilters li {
+}
+
+ul#selectedFilters li a {
+	color: black;
+	font-weight: bold;
+	font-size: small;
+	text-decoration: none;
+}
+
+ul#selectedFilters li a:hover {
+	text-decoration: underline;
+}
+
+div#logo {
+}
+
+div#navIcons {
+	margin-top: 15px;
+	margin-bottom: 7px;
+}
+
+span#searchIcon {
+	margin-left: 5px;
+}
+
+/* "Further filters" bar */
+
+div#furtherFilters {
+	padding: 10px;
+	border-top: 1px #bbb solid;
+	border-bottom: 1px #bbb solid;
+	background: #333340;
+	color: #ccc;
+}
+
+div#furtherFilters a {
+	color: white;
+}
+
+div#furtherFilters a.compoundFilterName {
+	color: #B9EA57;
+}
+
+span.compoundFilterName {
+	color: #75A613;
+}
+
+/* Display format tabs */
+
+ul#displaySelector {
+	margin: 10px 5px 15px 5px;
+	padding: 10px 0 5px 0;
+	border-bottom: 1px black solid;
+	list-style-type: none;
+}
+
+ul#displaySelector li {
+	padding: 6px;
+	margin: 0 5px 0 5px;
+	display: inline;
+}
+
+ul#displaySelector li.selectedDisplay {
+	border: 1px black solid;
+	border-bottom: 1px white solid;
+	background: white;
+}
+
+ul#displaySelector li.display {
+	border: 1px #444 solid;
+	background: #ddd;
+}
+
+/* Clickable lists of values - categories, items, filter values, formats etc. */
+
+ul.rows {
+	padding: 0;
+	margin: 0;
+	border-bottom: 1px #555 solid;
+	list-style-type: none;
+}
+
+ul.rows li {
+	padding: 6px;
+	margin: 0;
+	vertical-align: middle;
+	border-top: 1px #555 solid;
+}
+
+li.clickable {
+	cursor: pointer;
+}
+
+/* Page number display */
+
+ul#pageNumbers {
+	padding-left: 0;
+	margin-left: 0;
+	list-style-type: none;
+}
+
+ul#pageNumbers li {
+	padding: 6px 9px 6px 9px;
+	margin: 5px;
+	border: 2px #754878 solid;
+	display: inline-block;
+}
+
+ul#pageNumbers li.clickable {
+	background: #F899FF;
+}
+
+/* List of categories/pages in start screen */
+
+ul#categoriesList li {
+	background: #DAE5E5;
+}
+ul#categoriesList li:hover {
+	background: #CAD5D5;
+}
+
+/* List of items */
+
+table.listElement {
+	width: 100%;
+}
+
+ul#itemsList li td{
+	font-weight: bold;
+}
+
+ul#itemsList li:hover {
+	background: #e3e3e3;
+}
+
+.additionalItemText {
+	color: #0066cc;
+	text-transform: uppercase;
+	font-size: small;
+}
+
+/* Display of map */
+
+div#mapCanvas {
+	height: 300px;
+}
+
+div#coordinates {
+	padding-top: 7px;
+	font-size: smaller;
+	color: #777;
+}
+
+/* Display of schedule */
+
+ul.scheduleList {
+	padding: 0;
+	margin: 0 0 30px 0;
+	border-bottom: 1px #555 solid;
+	list-style-type: none;
+}
+
+ul.scheduleList li {
+	background: #D9FFB4;
+	padding: 3px 10px 3px 10px;
+	margin: 0;
+	vertical-align: middle;
+	border-top: 1px #555 solid;
+}
+ul.scheduleList li:hover {
+	background: #C9EFA4;
+}
+
+ul.scheduleList li td{
+	font-weight: bold;
+}
+
+/* List of filter values */
+
+ul#filterValuesList li {
+	background: #FCF9B2;
+}
+ul#filterValuesList li:hover {
+	background: #EAE7A0;
+}
+ul#filterValuesList.numberDisplay li {
+	/*background: #7847FF;*/
+}
+ul#filterValuesList.numberDisplay li:hover {
+	/*background: #9867FF;*/
+}
+ul#filterValuesList.numberDisplay li table tr td {
+	/*color: white;*/
+}
+div.numValuesBar {
+	height: 8px;
+	margin-top: 3px;
+	background: #002E57;
+}
+
+/* List of values for a single item */
+
+ul#itemValues {
+	margin: 0;
+	padding: 0;
+	list-style-type: none;
+}
+ul#itemValues li {
+	padding: 6px;
+}
+ul#itemValues li:nth-child(even) {
+	/*background: #f5f5f5;*/
+	border-top: 1px dashed #bbb;
+	border-bottom: 1px dashed #bbb;
+}
+
+span.fieldName {
+	font-weight: bold;
+}
+
+ul.compoundEntityInfo {
+	border: 1px black solid;
+	padding: 5px;
+	margin: 7px 3px 5px 3px;
+	background: #eee;
+	list-style-type: none;
+	font-size: smaller;
+}
+
+ul.compoundEntityInfo a {
+	font-size: medium;
+	font-weight: bold;
+}
+
+/* Search input and results */
+
+div#searchInput {
+	padding: 10px;
+	border-top: 1px #bbb solid;
+	border-bottom: 1px #bbb solid;
+	background: #ddd;
+}
+
+ul#nameSearchResults li, ul#contentSearchResults li {
+	background: #F9C3C3;
+}
+
+ul#nameSearchResults li:hover, ul#contentSearchResults li:hover {
+	background: #E7B1B1;
+}
+
+td.searchResultItemName {
+	vertical-align: top;
+	width: 35%;
+}
+
+td.searchResultItemValues {
+	vertical-align: top;
+	font-style: italic;
+}
+
+td.searchResultItemValues hr {
+	border-style: none none dashed;
+	color: #444;
+}
+
+span.trueSearchText {
+	font-weight: bold;
+}
+
+/* "Powered by" button */
+div#poweredBy {
+	padding: 12px 0 12px 0;
+	text-align: right;
+}
+
+/* "Refresh data" link */
+div#refreshData {
+	font-size: smaller;
+	text-align: right;
+}
