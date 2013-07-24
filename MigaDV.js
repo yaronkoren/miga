@@ -563,7 +563,8 @@ function displayItemsScreen( mdvState ) {
 		if ( mdvState.displayFormat == 'map' && propType == 'Coordinates' ) {
 			coordinatesProperty = propName;
 		}
-		if ( dateProperty == null && DataLoader.isDateType(propType) ) {
+		// Restrict schedule to just 'Start time' type
+		if ( dateProperty == null && propType == 'Start time' ) {
 			dateProperty = propName;
 		}
 		if ( imageProperty == null && propType == 'Image URL' ) {
