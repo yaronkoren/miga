@@ -20,34 +20,50 @@ if ( ! file_exists( $fileName ) ) {
 
 include_once( $fileName );
 
-$url = $gImportSpecialAskURL . "?q=";
-if ( $gImportCategoryName == null ) {
-	$firstProperty = reset( $gImportFields );
-	$url .= urlencode( "[[$firstProperty::+]]" );
-} else {
-	$url .= urlencode( "[[$gImportCategoryName]]" );
-}
-
-$url .= "&po=";
-foreach ( $gImportFields as $propertyName ) {
-	if ( $propertyName == '_name' ) continue;
-	$url .= urlencode( '?' . $propertyName . "\n" );
-}
-
-$url .= "&p%5Bformat%5D=csv&p%5Bheaders%5D=hide&p%5Blimit%5D=10000";
-if ( !in_array( '_name', $gImportFields ) ) {
-	$url .= "&p%5Bmainlabel%5D=-";
-}
-//die($url);
-
-$contents = file_get_contents( $url );
-//die($contents);
-
 $file_handle = fopen( $gImportFileName, "w" );
 $headers = array_keys( $gImportFields );
 fputcsv( $file_handle, $headers );
+fclose( $file_handle );
+
+$askURL = $gImportSpecialAskURL . "?q=";
+if ( $gImportCategoryName == null ) {
+	$firstProperty = reset( $gImportFields );
+	$askURL .= urlencode( "[[$firstProperty::+]]" );
+} else {
+	$askURL .= urlencode( "[[$gImportCategoryName]]" );
+}
+
+$askURL .= "&po=";
+foreach ( $gImportFields as $propertyName ) {
+	// Ignore all special fields
+	if ( strpos( $propertyName, '_' ) === 0 ) continue;
+	$askURL .= urlencode( '?' . $propertyName . "\n" );
+}
+
+if ( !in_array( '_name', $gImportFields ) ) {
+	$askURL .= "&p%5Bmainlabel%5D=-";
+}
+$askURL .= "&p%5Bformat%5D=csv&p%5Bheaders%5D=hide&p%5Blimit%5D=100";
+//die($askURL);
 
 // We need to get another handle, for some reason.
 $file_handle2 = fopen( $gImportFileName, "a" );
-fwrite( $file_handle2, $contents );
+
+$offset = 0;
+do {
+	// @TODO - probably should have a "verbose" mode
+	//print "Getting batch starting at row $offset...";
+	$fullAskURL = $askURL . "&p%5Boffset%5D=$offset";
+	$contents = file_get_contents( $fullAskURL );
+	//die($contents);
+
+	if ( $contents != '' ) {
+		fwrite( $file_handle2, $contents );
+	} else {
+		//print " No such batch found; exiting.";
+	}
+	//print "\n";
+	$offset += 100;
+} while ( $contents != '' );
+
 fclose( $file_handle2 );
