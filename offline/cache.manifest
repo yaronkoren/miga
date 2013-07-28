@@ -1,0 +1,22 @@
+CACHE MANIFEST
+CACHE:
+# JavaScript files
+../DataLoader.js
+../DateUtils.js
+../MDVCoordinates.js
+../MDVState.js
+../MigaDV.js
+../NumberUtils.js
+../WebSQLConnector.js
+# 3rd-party JavaScript files
+../libs/jquery-1.9.0.min.js
+# CSS
+../main.css
+# images
+../images/Ajax-loader.gif
+../images/miga-homepage.png
+../images/miga-search.png
+../images/Powered-by-Miga.png
+NETWORK:
+# everything else
+*
