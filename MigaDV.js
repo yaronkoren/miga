@@ -155,6 +155,40 @@ function setAllFromAppSettings() {
 		}
 		document.getElementsByTagName('head')[0].appendChild(link);
 	}
+	if ( gAppSettings.hasOwnProperty('App icon') ) {
+		var link = document.createElement('link');
+		// Set whether or not it's 'precomposed' based on whether
+		// or not it's an Android browser. For iOS, it shouldn't be
+		// precomposed, because we want the nice "shiny" addition
+		// to the icon. (Or do we?)
+		var ua = navigator.userAgent.toLowerCase();
+		var isAndroid = ua.indexOf("android") > -1; //&& ua.indexOf("mobile");
+		if ( isAndroid ) {
+			link.rel = 'apple-touch-icon-precomposed';
+		} else {
+			link.rel = 'apple-touch-icon';
+		}
+		if ( gAppSettings['App icon'].indexOf('://') > 0 ) {
+			link.href = gAppSettings['App icon'];
+		} else {
+			link.href = "apps/" + gAppSettings['Directory'] + "/" + gAppSettings['App icon'];
+		}
+		document.getElementsByTagName('head')[0].appendChild(link);
+	}
+
+	// This <meta> tag removes the browser's URL bar at the top and
+	// navigation bar at the bottom, making it look like a native app.
+	// Unfortunately, it currently only works in iOS, not Android.
+	// Also, the fact that it removes the navigation bar means that Miga
+	// would at least need to add a "back" button (and ideally a "forward"
+	// button as well) before it was activated.
+	/*
+	var meta = document.createElement('meta');
+	meta.name = "apple-mobile-web-app-capable";
+	meta.content = "yes";
+	document.getElementsByTagName('head')[0].appendChild(meta);
+	*/
+
 	displayTitle( null );
 }
 
