@@ -1,0 +1,17 @@
+This is the /apps directory - it is meant to hold information about each
+"app" powered by this Miga installation. Each app (there may just be one)
+should have its own directory within /apps, holding one or more of the
+following:
+
+* CSV files, holding the structured data (if any) of this app
+* a .ini file describing the data schemas of the CSV file(s)
+* HTML files, for any static content pages that the app holds
+* a logo image
+* a favicon image
+* an "app icon" image (used for screen shortcuts on mobile devices)
+* a CSS file, to override the main CSS settings
+* importer settings files for any of the CSV files that are generated with
+an importer.
+
+(This README file exists for two reasons: to explain the /apps directory,
+and because Git does not allow empty directories in the source tree.)
