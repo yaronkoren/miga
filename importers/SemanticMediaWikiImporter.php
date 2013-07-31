@@ -25,6 +25,8 @@ $headers = array_keys( $gImportFields );
 fputcsv( $file_handle, $headers );
 fclose( $file_handle );
 
+$rowsPerBatch = 500;
+
 $askURL = $gImportSpecialAskURL . "?q=";
 if ( $gImportCategoryName == null ) {
 	$firstProperty = reset( $gImportFields );
@@ -43,7 +45,7 @@ foreach ( $gImportFields as $propertyName ) {
 if ( !in_array( '_name', $gImportFields ) ) {
 	$askURL .= "&p%5Bmainlabel%5D=-";
 }
-$askURL .= "&p%5Bformat%5D=csv&p%5Bheaders%5D=hide&p%5Blimit%5D=100";
+$askURL .= "&p%5Bformat%5D=csv&p%5Bheaders%5D=hide&p%5Blimit%5D=$rowsPerBatch";
 //die($askURL);
 
 // We need to get another handle, for some reason.
@@ -63,7 +65,7 @@ do {
 		//print " No such batch found; exiting.";
 	}
 	//print "\n";
-	$offset += 100;
+	$offset += $rowsPerBatch;
 } while ( $contents != '' );
 
 fclose( $file_handle2 );
