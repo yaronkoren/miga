@@ -1,5 +1,8 @@
 <?php
 
+// Simulate a CSV file.
+header( 'Content-type: text/csv' );
+
 $dataFile = $_REQUEST['file'];
 //$dataFormat = $_REQUEST['format'];
 //$getTimestamp = $_REQUEST['timestamp'];
