@@ -128,7 +128,7 @@ function setAllFromAppSettings() {
 		} else {
 			var logoHTML = '<img src="apps/' + gAppSettings['Directory'] + "/" + gAppSettings['Logo'] + "\" />\n";
 		}
-		jQuery('#logo').html(logoHTML);
+		jQuery('#logo').html('<a href="#">' + logoHTML + '</a>');
 	} else {
 		jQuery('#logo').html("");
 	}
@@ -235,13 +235,12 @@ function displayTitle( mdvState ) {
 		getSettingsAndLoadData();
 	} else {
 		var titleText = gAppSettings['Name'];
+		jQuery('#title').html('<a href="#">' + titleText + '</a>');
+
 		var documentTitleText = gAppSettings['Name'];
 		if ( mdvState == null ) {
 			// Do nothing
 		} else if ( mdvState.categoryName != null ) {
-			var mdvStateForCategory = new MDVState();
-			mdvStateForCategory.categoryName = mdvState.categoryName;
-			titleText += ': <strong><a href="' + mdvStateForCategory.getURLHash() + '">' + mdvStateForCategory.categoryName + '</a></strong>';
 			//documentTitleText += ": " + mdvState.categoryName;
 			if ( mdvState.itemName != null ) {
 				documentTitleText += ": " + mdvState.itemName;
@@ -249,7 +248,6 @@ function displayTitle( mdvState ) {
 		} else if ( mdvState.pageName != null ) {
 			documentTitleText += ": " + mdvState.pageName;
 		}
-		jQuery('#title').html(titleText);
 		document.title = documentTitleText;
 	}
 	jQuery('#searchInputWrapper').html(null);
@@ -277,7 +275,7 @@ function showCurrentEventsLink( categoryName ) {
 
 function displayCategorySelector() {
 	displayTitle( null );
-	jQuery('#selectedFilters').html("");
+	jQuery('#categoryAndSelectedFilters').html("");
 	jQuery('#furtherFiltersWrapper').html("");
 
 	var categoryNames = [];
@@ -327,7 +325,7 @@ function displayCategorySelector() {
 			} else if ( curPage.hasOwnProperty('Category') ) {
 				mdvState.categoryName = curPage['Category'];
 			}
-			msg += listElementHTML( mdvState, pageName );
+			msg += listElementHTML( mdvState, pageName, false );
 		}
 	} else {
 		for ( var i = 0; i < categoryNames.length; i++ ) {
@@ -339,12 +337,12 @@ function displayCategorySelector() {
 				// will get un-hidden if there are any
 				// events currently happening.
 				mdvState.currentEventsOnly = true;
-				msg += listElementHTML( mdvState, '&nbsp;&nbsp;&nbsp;&nbsp;View Current ' + mdvState.categoryName );
+				msg += listElementHTML( mdvState, '&nbsp;&nbsp;&nbsp;&nbsp;View Current ' + mdvState.categoryName, false );
 				gDBConn.possiblyShowCurrentEventsLink( mdvState );
 				continue;
 			}
 			var mdvState = new MDVState( categoryName );
-			msg += listElementHTML( mdvState, 'View ' + categoryName );
+			msg += listElementHTML( mdvState, 'View ' + categoryName, false );
 		}
 	}
 	msg += "</ul>\n";
@@ -352,27 +350,44 @@ function displayCategorySelector() {
 	makeRowsClickable();
 }
 
-function displaySelectedFiltersList( mdvState ) {
+function displayCategoryAndSelectedFiltersList( mdvState ) {
 	var selectedFilters = mdvState.selectedFilters;
-	var msg = '<ul id="selectedFilters">';
+
+	var filtersDisplay = '<ul id="selectedFilters">';
 	if ( mdvState.currentEventsOnly ) {
-		msg += "<li>Currently-occurring events only.</li>\n";
+		filtersDisplay += "<li>Currently-occurring events only.</li>\n";
 	}
+	var filterNum = 0;
 	for ( var propName in selectedFilters ) {
-		msg += "<li>";
+		filterNum++;
+		filtersDisplay += "<li>";
 		var propValueDisplay = selectedFilters[propName];
 		if ( selectedFilters[propName] == '__null' ) {
 			propValueDisplay = "<em>No value</em>";
 		}
-		msg += propName + " = <strong>" + propValueDisplay + "</strong> ";
+		if ( filterNum > 1 ) { filtersDisplay += '& '; }
+		filtersDisplay += propName + " = <strong>" + propValueDisplay + "</strong> ";
 		var newDBState = mdvState.clone();
 		delete newDBState.selectedFilters[propName];
-		//msg += '<a href="' + newDBState.getURLHash() + '"><strong>[</strong>&#10006;<strong>]</strong></a>';
-		msg += '<a href="' + newDBState.getURLHash() + '">[&#10005;]</a>';
-		msg += "</li>";
+		filtersDisplay += '<a href="' + newDBState.getURLHash() + '">[&#10005;]</a>';
+		filtersDisplay += "</li>";
 	}
-	msg += "</ul>";
-	jQuery('#selectedFilters').html( msg );
+	filtersDisplay += "</ul>";
+
+	// Only make the category name a link if there are any filters selected.
+	// We set the category display afterward, even though it appears
+	// beforehand, because we need to know the number of filters, and
+	// since it's an associative array there's no way to find that out
+	// other than cycling through it.
+	// Actually... for now, always show the link.
+	//if ( filterNum > 0 ) {
+		var mdvStateForCategory = new MDVState();
+		mdvStateForCategory.categoryName = mdvState.categoryName;
+		var categoryDisplay = '<strong><a href="' + mdvStateForCategory.getURLHash() + '">' + mdvStateForCategory.categoryName + '</a></strong>';
+	//} else {
+	//	var categoryDisplay = '<strong>' + mdvState.categoryName + '</strong>';
+	//}
+	jQuery('#categoryAndSelectedFilters').html( categoryDisplay + filtersDisplay );
 }
 
 function displayAdditionalFilters( mdvState ) {
@@ -454,13 +469,13 @@ function displayAdditionalFilters( mdvState ) {
 				if ( isCompoundFilter ) {
 					msg += ' <span class="compoundFilterName">' + filterName.substring( filterColonsLoc + 2 ) + '</span>';
 				} else {
-					msg += " " + filterName;
+					msg += " <span>" + filterName + '</span>';
 				}
 			} else {
 				if ( isCompoundFilter ) {
 					msg += ' <a href="' + newDBState.getURLHash() + '" class="compoundFilterName">' + filterName.substring( filterColonsLoc + 2 ) + "</a>";
 				} else {
-					msg += ' <a href="' + newDBState.getURLHash() + '">' + filterName + "</a>";
+					msg += ' <span class="clickable" real-href="' + newDBState.getURLHash() + '">' + filterName + "</span>";
 				}
 			}
 		}
@@ -474,15 +489,14 @@ function displayAdditionalFilters( mdvState ) {
 }
 
 function displayItem( itemID, itemName ) {
-	jQuery('#selectedFilters').html("");
 	jQuery('#furtherFiltersWrapper').html("");
 	displayMainText('<ul id="itemValues"></ul>');
 	// This displayItem() function will itself call displayItemValues().
 	gDBConn.displayItem( itemID, itemName );
 }
 
-function listElementHTML( mdvState, internalHTML ) {
-	msg = '<li ';
+function listElementHTML( mdvState, internalHTML, isDiv ) {
+	msg = ( isDiv ) ? '<div ' : '<li ';
 	if ( mdvState.currentEventsOnly ) {
 		msg += 'id="view-current-' + mdvState.categoryName + '" ';
 		msg += 'style="display: none;" ';
@@ -492,7 +506,8 @@ function listElementHTML( mdvState, internalHTML ) {
 	msg += '<td>' + internalHTML + "</td>";
 	msg += '<td style="text-align: right; font-weight: bold;">&gt;</td>';
 	msg += '</tr></table>';
-	msg += "</li>\n";
+	msg += ( isDiv ) ? '</div>' : '</li>';
+	msg += "\n";
 	return msg;
 }
 
@@ -516,20 +531,40 @@ function displayFormatTabs( mdvState, allDisplayFormats ) {
 	displayMainText( msg );
 }
 
-function displayFilterFormatTabs( mdvState ) {
-	msg = '<ul id="displaySelector">';
+// @TODO - remove duplicate code that's in both of the below functions.
+function setTrueFilterDisplayFormat( mdvState, hasNumericalVariation ) {
 	var filterType = mdvState.getDisplayFilterType();
 	if ( DataLoader.isDateType(filterType) ) {
 		if ( mdvState.filterDisplayFormat == null ) {
 			mdvState.filterDisplayFormat = 'date';
 		}
-		var filterDisplayFormats = ['date', 'number'];
 	} else {
 		if ( mdvState.filterDisplayFormat == null ) {
-			mdvState.filterDisplayFormat = 'number';
+			if ( hasNumericalVariation ) {
+				mdvState.filterDisplayFormat = 'number';
+			} else {
+				mdvState.filterDisplayFormat = 'alphabetical';
+			}
 		}
+	}
+}
+
+
+function displayFilterFormatTabs( mdvState ) {
+	var filterType = mdvState.getDisplayFilterType();
+	if ( DataLoader.isDateType(filterType) ) {
+		//if ( mdvState.filterDisplayFormat == null ) {
+		//	mdvState.filterDisplayFormat = 'date';
+		//}
+		var filterDisplayFormats = ['date', 'number'];
+	} else {
+		//if ( mdvState.filterDisplayFormat == null ) {
+		//	mdvState.filterDisplayFormat = 'number';
+		//}
 		var filterDisplayFormats = ['number', 'alphabetical'];
 	}
+
+	var msg = '<ul id="displaySelector">';
 	for ( i = 0; i < filterDisplayFormats.length; i++ ) {
 		var curFormat = filterDisplayFormats[i];
 		if ( DataLoader.isDateType(filterType) ) {
@@ -582,7 +617,7 @@ function displayPageNavigation( mdvState, numItems, itemsPerPage ) {
 
 function displayItemsScreen( mdvState ) {
 	displayTitle( mdvState );
-	displaySelectedFiltersList( mdvState );
+	displayCategoryAndSelectedFiltersList( mdvState );
 	displayAdditionalFilters( mdvState );
 
 	var imageProperty = null;
@@ -952,7 +987,7 @@ function displayItems( mdvState, allItemValues ) {
 	}
 	addToMainText( msg );
 
-	msg = "<ul id=\"itemsList\" class=\"rows\">\n";
+	msg = "<div id=\"itemsList\" class=\"cells\">\n";
 	for (i = firstItemToShow - 1; i < lastItemToShow; i++) {
 		var internalHTML = "";
 		var imageURL = allItemValues[i]['ImageURL'];
@@ -966,9 +1001,9 @@ function displayItems( mdvState, allItemValues ) {
 		}
 		var mdvState = new MDVState();
 		mdvState.itemID = allItemValues[i]['SubjectID'];
-		msg += listElementHTML( mdvState, internalHTML );
+		msg += listElementHTML( mdvState, internalHTML, true );
 	}
-	msg += "</ul>";
+	msg += "</div>";
 	addToMainText( msg );
 	makeRowsClickable();
 }
@@ -1003,7 +1038,7 @@ function displayItemValues( itemValues ) {
 			objectString = objectString.replace("\n", '<br />');
 		} else if ( propType == 'URL' ) {
 			if ( objectString != '' ) {
-				objectString = '<a href="' + encodeURI(objectString) + '">' + objectString + '</a>';
+				objectString = '<a href="' + objectString + '">' + objectString + '</a>';
 			}
 		} else if ( propType == 'Image URL' ) {
 			if ( objectString != '' ) {
@@ -1091,9 +1126,28 @@ function displayCompoundItemValues( entityValues, itemName ) {
 
 function displayFilterValuesScreen( mdvState ) {
 	displayTitle( mdvState );
-	displaySelectedFiltersList( mdvState );
+	displayCategoryAndSelectedFiltersList( mdvState );
 	displayAdditionalFilters( mdvState );
 	gDBConn.displayFilterValues( mdvState );
+}
+
+function filterValuesHaveNumericalVariation( filterValues ) {
+	var len = filterValues.length;
+	if ( len < 2 ) { return false; }
+	var firstValue = null;
+	for (var i = 0; i < len; i++) {
+		var curValue = filterValues[i]['numValues'];
+		// Ignore '0' values
+		if ( curValue == 0 ) {
+			continue;
+		}
+		if ( firstValue == null ) {
+			firstValue = curValue;
+		} else if ( curValue != firstValue ) {
+			return true;
+		}
+	}
+	return false;
 }
 
 function displayFilterValues( mdvState, filterValues ) {
@@ -1101,25 +1155,24 @@ function displayFilterValues( mdvState, filterValues ) {
 	var msg = "<p>Values for <strong>" + mdvState.displayFilter + "</strong>:</p>\n"
 	addToMainText( msg );
 
+	// This is the 'type' of the filter - String, Number, Date, etc.
 	var filterType = mdvState.getDisplayFilterType();
 
 	var len = filterValues.length;
+	var hasNumericalVariation = filterValuesHaveNumericalVariation( filterValues );
 	// Skip over all filter display format stuff if there's only one
 	// filter value.
 	if ( len <= 1 ) {
-		msg = "<ul id=\"filterValuesList\" class=\"rows\">\n";
+		msg = "<div id=\"filterValuesList\" class=\"cells\">\n";
 	} else {
+		if ( filterType != 'Number' ) {
+			setTrueFilterDisplayFormat( mdvState, hasNumericalVariation );
+		}
 		// Display this for all but 'Number' filters - it doesn't make
 		// sense for that case.
-		if ( filterType != 'Number' ) {
+		if ( filterType != 'Number' && hasNumericalVariation ) {
 			displayFilterFormatTabs( mdvState );
 		}
-		if ( mdvState.filterDisplayFormat == 'number' ) {
-			msg = "<ul id=\"filterValuesList\" class=\"numberDisplay rows\">\n";
-		} else {
-			msg = "<ul id=\"filterValuesList\" class=\"rows\">\n";
-		}
-
 		if ( mdvState.filterDisplayFormat == 'number' ) {
 			// Sort by number of values, descending.
 			filterValues.sort( function(a,b) { return b['numValues'] - a['numValues']; } );
@@ -1134,6 +1187,9 @@ function displayFilterValues( mdvState, filterValues ) {
 			}
 		*/
 		}
+		var mainClass = ( mdvState.filterDisplayFormat == 'alphabetical' ) ? 'cells' : 'rows';
+		msg = "<div id=\"filterValuesList\" class=\"" + mdvState.filterDisplayFormat + "Display " + mainClass + "\">\n";
+
 	}
 
 	for (var i = 0; i < len; i++) {
@@ -1153,21 +1209,23 @@ function displayFilterValues( mdvState, filterValues ) {
 			filterNameDisplay = filterName.toString();
 			filterHash = filterName.toString();
 		}
-		var rowDisplay = filterNameDisplay + " (" + curFilter['numValues'] + ")";
+		var rowDisplay = '<strong>' + filterNameDisplay + "</strong> (" + curFilter['numValues'] + ")";
 		if ( mdvState.filterDisplayFormat == 'number' ) {
 			rowDisplay += ' ';
 			var numPixels = Math.ceil( 200 * curFilter['numValues'] / highestNum );
+			//var percentWidth = Math.ceil( 75 * curFilter['numValues'] / highestNum );
 			// If it's just one pixel, don't even bother - it
 			// doesn't add any real info.
 			if ( numPixels > 1 ) {
 				rowDisplay += '<div class="numValuesBar" style="width: ' + numPixels + 'px;"></div>';
+				//rowDisplay += '<div class="numValuesBar" style="width: ' + percentWidth + '%;"></div>';
 			}
 		}
 		newDBState.selectedFilters[mdvState.displayFilter] = filterHash;
 		newDBState.filterDisplayFormat = null; // always reset this
-		msg += listElementHTML( newDBState, rowDisplay );
+		msg += listElementHTML( newDBState, rowDisplay, true );
 	}
-	msg += "</ul>\n";
+	msg += "</div>\n";
 	addToMainText( msg );
 	makeRowsClickable();
 }
@@ -1239,7 +1297,7 @@ function searchResultInContext( searchText, fullText ) {
 
 function displaySearchResultsScreen( mdvState ) {
 	displayTitle( mdvState );
-	jQuery('#selectedFilters').html();
+	jQuery('#categoryAndSelectedFilters').html();
 	jQuery('#furtherFiltersWrapper').html();
 	if ( mdvState.searchString == '' ) {
 		displayMainText("<h2>Search</h2>");
@@ -1264,7 +1322,7 @@ function displayNameSearchResults( mdvState, searchResults ) {
 		var formattedItemName = formattedNameInSearchResults( mdvState.searchString, searchResults[i]['Name'] );
 		var newDBState = new MDVState();
 		newDBState.itemID = searchResults[i]['ID'];
-		text += listElementHTML( newDBState, formattedItemName );
+		text += listElementHTML( newDBState, formattedItemName, false );
 	}
 	text += "</ul>\n";
 	addToMainText( text );

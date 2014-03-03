@@ -70,7 +70,13 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 			},
 			function (tx, error) {
 				displayMainText("<h3>Database error! " + error.message + " (code = " + error.code + ").</h3>");
-				addToMainText("<p>Please make sure that this browser is not in a private browsing mode - that is the most likely cause of this error. (If you are using an iPhone or iPad, go to Settings > Safari > Private Browsing.)</p>");
+				addToMainText('<p>Please make sure that this browser is not in a private browsing mode - that is the most likely cause of this error.<p> \
+<p>If you are using an iPhone or iPad:</p> \
+<ul> \
+<li>For iOS 6 or below, go to Settings > Safari > Private Browsing.)</li> \
+<li>For iPhone with iOS 7 and above, click on the two-square icon at the bottom right of this screen, then click "Private" on the bottom left.</li> \
+<li>For iPad with iOS 7 and above, click on "+" at the top of this screen, then click "Private" at the bottom of the new window.</li> \
+</ul>');
 			}
 		);
 		tx.executeSql(textCreationSQL);
@@ -338,6 +344,8 @@ WebSQLConnector.prototype.displayItem = function( itemID, itemName ) {
 					mdvState.categoryName = gCurCategory;
 					mdvState.itemName = itemName;
 					displayTitle( mdvState );
+					displayCategoryAndSelectedFiltersList( mdvState );
+
 					displayItemTitle( itemName );
 					displaySearchIcon( gCurCategory );
 				}

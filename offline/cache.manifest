@@ -14,7 +14,6 @@ CACHE:
 ../main.css
 # images
 ../images/Ajax-loader.gif
-../images/miga-homepage.png
 ../images/miga-search.png
 ../images/Powered-by-Miga.png
 NETWORK:

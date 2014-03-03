@@ -139,7 +139,7 @@ DataLoader.getAndLoadDataForOneCategory = function( allData, appDirectory, remai
 DataLoader.getAndLoadDataIfNecessary = function( appDirectory, schemaFileName ) {
 	displayLoadingMessage( "Loading data; please wait..." );
 
-	if ( gDataSchema != null ) {
+	if ( gDataSchema != null && schemaFileName != undefined ) {
 		// Fix this - we need to test whether the DB is populated
 		// in order to figure out what to do next.
 		//gDBConn.loadDataIfNecessary( allData );

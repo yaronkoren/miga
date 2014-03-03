@@ -8,7 +8,7 @@
 
 body {
 	padding: 15px;
-	font-family: Helvetica,Arial,sans-serif;
+	font-family: "Open Sans","Lucida Sans",Avenir,Helvetica,Arial,sans-serif;
 }
 
 a {
@@ -23,20 +23,59 @@ a:active {
 
 div#logoAndIcons {
 	float: left;
+	max-width: 25%;
+}
+
+div#logo {
+	width: 100%;
+}
+
+div#logo img {
+	width: 100%;
 }
 
 div#title {
 	font-size: x-large;
+	font-weight: bold;
 	padding: 10px;
-	text-align: right;
+	text-align: center;
+	display: inline-block;
+	max-width: 25%;
 }
 
-div#selectedFilters {
+div#title a {
+	color: black;
+	text-decoration: none;
+}
+
+div#title a:hover {
+	text-decoration: underline;
+}
+
+div#categoryAndSelectedFilters {
+	text-align: right;
+	font-size: x-large;
 	float: right;
+	padding: 15px;
+	max-width: 40%;
+}
+
+div#categoryAndSelectedFilters a {
+	text-decoration: none;
+}
+
+div#categoryAndSelectedFilters a:hover {
+	text-decoration: underline;
 }
 
 br.separator {
 	clear: both;
+}
+
+div#fullWrapper {
+	max-width: 1150px;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 table#headerTable {
@@ -48,10 +87,8 @@ table#headerTable tr td {
 }
 
 ul#selectedFilters {
-	padding: 10px;
-	text-align: right;
-	font-size: large;
-	color: #EA4A15;
+	padding: 0;
+	margin: 0;
 	list-style-type: none;
 }
 
@@ -59,7 +96,7 @@ ul#selectedFilters li {
 }
 
 ul#selectedFilters li a {
-	color: black;
+	color: #EA4A15;
 	font-weight: bold;
 	font-size: small;
 	text-decoration: none;
@@ -84,15 +121,27 @@ span#searchIcon {
 /* "Further filters" bar */
 
 div#furtherFilters {
-	padding: 10px;
+	padding: 7px 7px 7px 7px;
 	border-top: 1px #bbb solid;
 	border-bottom: 1px #bbb solid;
-	background: #333340;
-	color: #ccc;
+	background: #1b6e22;
+	font-size: large;
+	line-height: 30px;
+	color: #ddd;
 }
 
-div#furtherFilters a {
+div#furtherFilters span {
+	margin: 0;
+	padding: 5px;
+}
+
+div#furtherFilters span.clickable {
+	cursor: pointer;
 	color: white;
+}
+
+div#furtherFilters span.clickable:hover {
+	background: #05580c;
 }
 
 div#furtherFilters a.compoundFilterName {
@@ -106,10 +155,10 @@ span.compoundFilterName {
 /* Display format tabs */
 
 ul#displaySelector {
-	margin: 10px 5px 15px 5px;
-	padding: 10px 0 5px 0;
-	border-bottom: 1px black solid;
 	list-style-type: none;
+	border-bottom: 1px black solid;
+	margin: 10px 5px 15px 5px;
+	padding: 10px 0 6px 0;
 }
 
 ul#displaySelector li {
@@ -138,6 +187,14 @@ ul.rows {
 	list-style-type: none;
 }
 
+div.rows {
+	border-bottom: 1px #555 solid;
+}
+
+div.cells {
+	border-bottom: 1px #555 solid;
+}
+
 ul.rows li {
 	padding: 6px;
 	margin: 0;
@@ -145,7 +202,30 @@ ul.rows li {
 	border-top: 1px #555 solid;
 }
 
+div.cells div.clickable {
+	padding: 6px;
+	margin-bottom: 12px;
+	margin-right: 7px;
+	vertical-align: middle;
+	width: 250px;
+	-moz-border-radius: 15px;
+	border-radius: 15px;
+	background: #f9f9f9;
+	border: 1px #bbb solid;
+	display: inline-block;
+	vertical-align: top;
+}
+
+table.listElement tr td img {
+	float: left;
+	padding-right: 5px;
+}
+
 li.clickable {
+	cursor: pointer;
+}
+
+div.clickable {
 	cursor: pointer;
 }
 
@@ -183,11 +263,11 @@ table.listElement {
 	width: 100%;
 }
 
-ul#itemsList li td{
+div#itemsList div.clickable td{
 	font-weight: bold;
 }
 
-ul#itemsList li:hover {
+div#itemsList div.clickable:hover {
 	background: #e3e3e3;
 }
 
@@ -235,19 +315,28 @@ ul.scheduleList li td{
 
 /* List of filter values */
 
+/*
 ul#filterValuesList li {
 	background: #FCF9B2;
 }
-ul#filterValuesList li:hover {
+*/
+div#filterValuesList div.clickable {
+	background: #FCF9B2;
+	padding: 6px;
+	border-top: 1px #555 solid;
+}
+div#filterValuesList div.clickable:hover {
 	background: #EAE7A0;
 }
-ul#filterValuesList.numberDisplay li {
-	/*background: #7847FF;*/
+
+div#filterValuesList.cells div.clickable {
+	border: 1px #555 solid;
 }
-ul#filterValuesList.numberDisplay li:hover {
+
+div#filterValuesList.numberDisplay div:hover {
 	/*background: #9867FF;*/
 }
-ul#filterValuesList.numberDisplay li table tr td {
+div#filterValuesList.numberDisplay div table tr td {
 	/*color: white;*/
 }
 div.numValuesBar {
@@ -278,11 +367,13 @@ span.fieldName {
 
 ul.compoundEntityInfo {
 	border: 1px black solid;
-	padding: 5px;
-	margin: 7px 3px 5px 3px;
+	-moz-border-radius: 8px;
+	border-radius: 9px;
+	padding: 10px;
+	margin: 7px 3px 12px 3px;
 	background: #eee;
 	list-style-type: none;
-	font-size: smaller;
+	/*font-size: smaller;*/
 }
 
 ul.compoundEntityInfo a {
@@ -336,4 +427,77 @@ div#poweredBy {
 div#refreshData {
 	font-size: smaller;
 	text-align: right;
+}
+
+/* Responsive skin stuff */
+
+/* 
+@media screen and (max-width: 2030px) {
+	div.cells div.clickable {
+		width: 15%;
+	}
+}
+
+@media screen and (max-width: 1650px) {
+	div.cells div.clickable {
+		width: 18%;
+	}
+}
+*/
+
+@media screen and (max-width: 1270px) {
+	/* Four columns */
+	div.cells div.clickable {
+		width: 22%;
+	}
+}
+
+@media screen and (max-width: 975px) {
+	/* Three columns */
+	div.cells div.clickable {
+		width: 29%;
+	}
+}
+
+@media screen and (max-width: 700px) {
+	div#title {
+		font-size: large;
+	}
+	div#categoryAndSelectedFilters {
+		font-size: large;
+	}
+	/* Two columns */
+	div.cells div.clickable {
+		width: 43%;
+	}
+}
+
+@media screen and (max-width: 550px) {
+	div#title {
+		font-size: medium;
+	}
+	div#categoryAndSelectedFilters {
+		font-size: medium;
+	}
+	div#furtherFilters {
+		font-size: medium;
+	}
+
+	/* Need special override for this. */
+	div#filterValuesList.cells div.clickable {
+		border: 0;
+		border-top: 1px #555 solid;
+	}
+
+	/* One column */
+	div.cells div.clickable {
+		display: block;
+		border: 0;
+		border-top: 1px #555 solid;
+		margin: 0;
+		width: auto;
+		-moz-border-radius: 0;
+		border-radius: 0;
+	}
+
 }
