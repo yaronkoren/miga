@@ -8,7 +8,7 @@
  *
  * @author Yaron Koren
  *
- * @version 1.0
+ * @version 1.1
  */
 
 // Global variables - sorry if this offends anyone. :)
@@ -304,7 +304,7 @@ function displayCategorySelector() {
 		len = categoryNames.length;
 	}
 	// If there's just one category or page, display it right away.
-	if (len == 1) {
+	if ( len == 1 ) {
 		mdvState = new MDVState();
 		mdvState.categoryName = categoryNames[0];
 		displayItemsScreen( mdvState );
@@ -351,13 +351,16 @@ function displayCategorySelector() {
 }
 
 function displayCategoryAndSelectedFiltersList( mdvState ) {
-	var selectedFilters = mdvState.selectedFilters;
+	var mdvStateForCategory = new MDVState();
+	mdvStateForCategory.categoryName = mdvState.categoryName;
+	var categoryDisplay = '<strong><a href="' + mdvStateForCategory.getURLHash() + '">' + mdvStateForCategory.categoryName + '</a></strong>';
 
 	var filtersDisplay = '<ul id="selectedFilters">';
 	if ( mdvState.currentEventsOnly ) {
 		filtersDisplay += "<li>Currently-occurring events only.</li>\n";
 	}
 	var filterNum = 0;
+	var selectedFilters = mdvState.selectedFilters;
 	for ( var propName in selectedFilters ) {
 		filterNum++;
 		filtersDisplay += "<li>";
@@ -374,19 +377,6 @@ function displayCategoryAndSelectedFiltersList( mdvState ) {
 	}
 	filtersDisplay += "</ul>";
 
-	// Only make the category name a link if there are any filters selected.
-	// We set the category display afterward, even though it appears
-	// beforehand, because we need to know the number of filters, and
-	// since it's an associative array there's no way to find that out
-	// other than cycling through it.
-	// Actually... for now, always show the link.
-	//if ( filterNum > 0 ) {
-		var mdvStateForCategory = new MDVState();
-		mdvStateForCategory.categoryName = mdvState.categoryName;
-		var categoryDisplay = '<strong><a href="' + mdvStateForCategory.getURLHash() + '">' + mdvStateForCategory.categoryName + '</a></strong>';
-	//} else {
-	//	var categoryDisplay = '<strong>' + mdvState.categoryName + '</strong>';
-	//}
 	jQuery('#categoryAndSelectedFilters').html( categoryDisplay + filtersDisplay );
 }
 
