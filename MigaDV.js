@@ -587,7 +587,7 @@ function displayFilterFormatTabs( mdvState ) {
 	addToMainText( msg );
 }
 
-function displayPageNavigation( mdvState, numItems, itemsPerPage ) {
+function pageNavigationHTML( mdvState, numItems, itemsPerPage ) {
 		msg = "<p>Go to page:</p>";
 		msg += '<ul id="pageNumbers">';
 		numPages = Math.ceil( numItems / itemsPerPage );
@@ -602,7 +602,7 @@ function displayPageNavigation( mdvState, numItems, itemsPerPage ) {
 			}
 		}
 		msg += "</ul>";
-		addToMainText( msg );
+		return msg;
 }
 
 function displayItemsScreen( mdvState ) {
@@ -965,8 +965,10 @@ function displayItems( mdvState, allItemValues ) {
 	}
 
 	var itemsPerPage = 500;
+	var pageNumsHTML = '';
 	if ( numItems > itemsPerPage ) {
-		displayPageNavigation( mdvState, numItems, itemsPerPage );
+		pageNumsHTML = pageNavigationHTML( mdvState, numItems, itemsPerPage );
+		addToMainText( pageNumsHTML );
 		var firstItemToShow = ( ( mdvState.pageNum - 1 ) * itemsPerPage ) + 1;
 		var lastItemToShow = Math.min( itemsPerPage * mdvState.pageNum, numItems );
 		msg = "<p>" + numItems + " results found; showing results <strong>" + firstItemToShow + " - " + lastItemToShow + "</strong>.</p>\n";
@@ -995,6 +997,8 @@ function displayItems( mdvState, allItemValues ) {
 	}
 	msg += "</div>";
 	addToMainText( msg );
+	// Show page numbers at the bottom as well.
+	addToMainText( pageNumsHTML );
 	makeRowsClickable();
 }
 
