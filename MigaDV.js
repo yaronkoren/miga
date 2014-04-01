@@ -964,7 +964,7 @@ function displayItems( mdvState, allItemValues ) {
 		return;
 	}
 
-	var itemsPerPage = 500;
+	var itemsPerPage = 250;
 	var pageNumsHTML = '';
 	if ( numItems > itemsPerPage ) {
 		pageNumsHTML = pageNavigationHTML( mdvState, numItems, itemsPerPage );
@@ -1037,6 +1037,16 @@ function displayItemValues( itemValues ) {
 		} else if ( propType == 'Image URL' ) {
 			if ( objectString != '' ) {
 				objectString = '<img src="' + objectString + '" />';
+			}
+		} else if ( propType == 'Video URL' ) {
+			if ( objectString != '' ) {
+				// HTML5 video
+				objectString = '<div style="max-width: 90%"><video controls><source src="' + objectString + '" /><p>This browser does not support HTML5 videos.</p></video></div>';
+			}
+		} else if ( propType == 'Document path' ) {
+			if ( objectString != '' ) {
+				// Use Viewer.JS - for either PDF or ODF files
+				objectString = '<p><iframe src="libs/Viewer.js/#../../apps/' + gAppSettings['Name'] + '/' + objectString + '" width="520" height="350" allowfullscreen webkitallowfullscreen></iframe></p>';
 			}
 		} else if ( DataLoader.isDateType(propType) ) {
 			objectString = Date.dbStringToDisplayString( objectString );

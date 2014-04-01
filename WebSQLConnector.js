@@ -108,7 +108,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 						continue;
 					}
 					var columnType = columnDescription['fieldType'];
-					if ( columnType != 'Image URL' && columnType != 'Text' && ( cellValue == null || cellValue == '' ) ) continue;
+					if ( columnType != 'Image URL' && columnType != 'Video URL' && columnType != 'Document path' && columnType != 'Text' && ( cellValue == null || cellValue == '' ) ) continue;
 					if ( columnType == 'Name' ) {
 						hasNameField = true;
 
@@ -571,7 +571,7 @@ WebSQLConnector.prototype.getSQLQuery = function( mdvState, imageProperty, coord
 		} else if ( filterType == 'Coordinates' ) {
 			dbTableName = coordinatePropsTableName;
 			objectField = tableAlias + ".Latitude, " + tableAlias + ".Longitude";
-		} else { // 'Text', 'URL', 'Image URL'
+		} else { // 'Text', 'URL', 'Image URL', 'Video URL', 'Document path'
 			dbTableName = textPropsTableName;
 			objectField = tableAlias + ".Object";
 		}
