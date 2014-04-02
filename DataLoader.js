@@ -48,7 +48,7 @@ function analyzeDataForCategory(categoryName, itemsArray) {
 			continue;
 		}
 		var fieldType = fieldAttributes['fieldType'];
-		if (fieldType == 'URL' || fieldType == 'Image URL' || fieldType == 'Video URL' || fieldType == 'Audio URL' || fieldType == 'Coordinates' || fieldType == 'End time' ) {
+		if (fieldType == 'URL' || fieldType == 'Image URL' || fieldType == 'Video URL' || fieldType == 'Coordinates' || fieldType == 'End time' ) {
 			continue;
 		}
 		if (DataLoader.isDateType(fieldType) || fieldType == 'Number') {

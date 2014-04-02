@@ -18,7 +18,7 @@ var entityPropsTableName = "entityProps";
 
 function WebSQLConnector( dbName ) {
 	if ( typeof openDatabase != 'function' ) {
-		throw 'This browser does not seem to support <a href="http://en.wikipedia.org/wiki/Web_SQL_Database">Web SQL Database</a>, which is necessary to run this site. Please use an alternate browser, such as <a href="http://google.com/chrome">Google Chrome</a>, <a href="http://www.apple.com/safari/">Safari</a>, <a href="http://www.opera.com">Opera</a>, Android browser, <a href="http://caniuse.com/sql-storage">etc.</a>';
+		throw 'This browser does not seem to support <a href="http://en.wikipedia.org/wiki/Web_SQL_Database">Web SQL Database</a>, which is necessary to run this site. Please use an alternate browser, such as Google Chrome, Safari, Opera, Android browser, etc.';
 	}
 
 	// We need this random string because Web SQL doesn't let you delete
@@ -108,7 +108,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 						continue;
 					}
 					var columnType = columnDescription['fieldType'];
-					if ( columnType != 'Image URL' && columnType != 'Video URL' && columnType != 'Audio URL' && columnType != 'Document path' && columnType != 'Text' && ( cellValue == null || cellValue == '' ) ) continue;
+					if ( columnType != 'Image URL' && columnType != 'Video URL' && columnType != 'Document path' && columnType != 'Text' && ( cellValue == null || cellValue == '' ) ) continue;
 					if ( columnType == 'Name' ) {
 						hasNameField = true;
 
@@ -571,7 +571,7 @@ WebSQLConnector.prototype.getSQLQuery = function( mdvState, imageProperty, coord
 		} else if ( filterType == 'Coordinates' ) {
 			dbTableName = coordinatePropsTableName;
 			objectField = tableAlias + ".Latitude, " + tableAlias + ".Longitude";
-		} else { // 'Text', 'URL', 'Image URL', 'Video URL', 'Audio URL', 'Document path'
+		} else { // 'Text', 'URL', 'Image URL', 'Video URL', 'Document path'
 			dbTableName = textPropsTableName;
 			objectField = tableAlias + ".Object";
 		}

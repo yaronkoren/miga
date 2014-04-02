@@ -216,15 +216,9 @@ div.cells div.clickable {
 	vertical-align: top;
 }
 
-table.listElement tr td {
+table.listElement tr td img {
 	float: left;
 	padding-right: 5px;
-}
-
-table.listElement img {
-	float: left;
-	padding-right: 5px;
-	width: 55px;
 }
 
 li.clickable {
