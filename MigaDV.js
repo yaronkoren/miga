@@ -1043,6 +1043,11 @@ function displayItemValues( itemValues ) {
 				// HTML5 video
 				objectString = '<div style="max-width: 90%"><video controls><source src="' + objectString + '" /><p>This browser does not support HTML5 videos.</p></video></div>';
 			}
+		} else if ( propType == 'Audio URL' ) {
+			if ( objectString != '' ) {
+				// HTML5 audio
+				objectString = '<div style="max-width: 90%"><audio controls><source src="' + objectString + '" /><p>This browser does not support HTML5 audio.</p></audio></div>';
+			}
 		} else if ( propType == 'Document path' ) {
 			if ( objectString != '' ) {
 				// Use Viewer.JS - for either PDF or ODF files
