@@ -1,0 +1,3 @@
+[submodule "libs/Viewer.js"]
+	path = libs/Viewer.js
+	url = git://github.com/kogmbh/Viewer.js
