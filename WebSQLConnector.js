@@ -54,7 +54,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 	dbConn.displayDBLoadingProgress( 0, 0, 10, 1, 1 );
 
 	var entitiesCreationSQL = "CREATE TABLE IF NOT EXISTS " + entitiesTableName + " (ID integer, Name text, Category text)";
-	var textCreationSQL = "CREATE TABLE IF NOT EXISTS " + textPropsTableName + " (SubjectID integer, Property text, Object text)";
+	var textCreationSQL = "CREATE TABLE IF NOT EXISTS " + textPropsTableName + " (SubjectID integer, Property text, Object text, FieldType text)";
 	var numberCreationSQL = "CREATE TABLE IF NOT EXISTS " + numberPropsTableName + " (SubjectID integer, Property text, Object real)";
 	var dateCreationSQL = "CREATE TABLE IF NOT EXISTS " + datePropsTableName + " (SubjectID integer, Property text, Date real)";
 	var coordinateCreationSQL = "CREATE TABLE IF NOT EXISTS " + coordinatePropsTableName + " (SubjectID integer, Property text, Latitude real, Longitude real)";
@@ -128,7 +128,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 					} else if ( columnType == 'Coordinates' ) {
 						insertionSQLStart = "INSERT INTO " + coordinatePropsTableName + " (SubjectID, Property, Latitude, Longitude) VALUES ("
 					} else { // 'Text', 'URL', 'ID', etc.
-						insertionSQLStart = "INSERT INTO " + textPropsTableName + " (SubjectID, Property, Object) VALUES ("
+						insertionSQLStart = "INSERT INTO " + textPropsTableName + " (SubjectID, Property, Object, FieldType) VALUES ("
 					}
 					if ( columnDescription['isList'] ) {
 						if ( cellValue == null ) {
@@ -202,9 +202,16 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 							}
 						} else { // "Text"
 							if ( objectParts[k] != null ) {
+								var absoluteURL = new RegExp('^(?:[a-z]+:)?//', 'i');
 								numTextEntries++;
-								object = "'" + objectParts[k].replace(/^\s+|\s+$/g,'').replace(/'/g, "''") + "'";
-								insertionSQL += object + ")";
+								object = objectParts[k].replace(/^\s+|\s+$/g,'').replace(/'/g, "''");
+								// for cacheable resources, we're storing them with a fully-qualified URI
+								// this facilitates the creation of the dynamic cache manifest
+								if (object.length > 0 && ['Video URL', 'Audio URL', 'Image URL', 'Document path'].indexOf(columnType) >= 0 && !absoluteURL.test(object)) {
+									insertionSQL += "'" + gAppSettings['Absolute URL Prefix'] + "/" + encodeURI(object) + "', '" + columnType + "')";
+								} else {
+									insertionSQL += "'" + object + "', '" + columnType + "')";
+								}
 								tx.categoryName = categoryName;
 								tx.rowNum = i;
 								tx.executeSql(insertionSQL, [], function( tx, results ) {
@@ -313,12 +320,42 @@ WebSQLConnector.prototype.loadDataIfNecessary = function( allData ) {
 		var selectSQL = 'SELECT ID FROM ' + entitiesTableName + ' LIMIT 1';
 		tx.executeSql(selectSQL, [],
 			function (tx, results) {
-				// Do nothing - it's already loaded.
+				// It's already loaded.  Dynamically update the cache manifest
+				dbConn.generateCacheManifest();
 				setDisplayFromURL();
 			},
 			function (tx, error) {
 				dbConn.loadData( allData );
 			}
+		);
+	});
+}
+
+WebSQLConnector.prototype.generateCacheManifest = function( allData ) {
+	var args = {};
+	var dbConn = this;
+	this.db.transaction(function (tx) {
+		// Get all cacheable resources to add to the cache manifest
+		var selectSQL = 'SELECT DISTINCT OBJECT FROM ' + textPropsTableName + " WHERE COALESCE(OBJECT, '') <> '' AND FIELDTYPE IN ('Video URL', 'Audio URL', 'Image URL', 'Document path')";
+		tx.executeSql(selectSQL, [],
+			function (tx, results) {
+				// create a list of cacheable resources
+				var len = results.rows.length, i;
+				var listCache = '';
+				for (i = 0; i < len; i++) {
+					listCache += "\n" + results.rows.item(i).Object;
+				}
+				// also cache the application logo
+				args['appDirectory'] = gAppSettings['Directory'];
+				if ( gAppSettings['Logo'].indexOf('://') > 0 ) {
+					listCache += "\n" + gAppSettings['Logo'];
+				} else {
+					listCache += "\n" + gAppSettings['Absolute URL Prefix'] + "/" + gAppSettings['Logo'];
+				}
+				args['listCache'] = listCache;
+				jQuery.post("GenerateManifest.php", args);
+			},
+			null
 		);
 	});
 }

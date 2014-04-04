@@ -1051,7 +1051,7 @@ function displayItemValues( itemValues ) {
 		} else if ( propType == 'Document path' ) {
 			if ( objectString != '' ) {
 				// Use Viewer.JS - for either PDF or ODF files
-				objectString = '<p><iframe src="libs/Viewer.js/#../../apps/' + gAppSettings['Name'] + '/' + objectString + '" width="520" height="350" allowfullscreen webkitallowfullscreen></iframe></p>';
+				objectString = '<p><iframe src="libs/Viewer.js/#' + objectString + '" width="520" height="350" allowfullscreen webkitallowfullscreen></iframe></p>';
 			}
 		} else if ( DataLoader.isDateType(propType) ) {
 			objectString = Date.dbStringToDisplayString( objectString );
