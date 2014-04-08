@@ -60,19 +60,3 @@ NETWORK:
 OFFLINE:
 / ./offline.html
 
-# MANIFEST>: Pokemon
-CACHE:
-
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/2013-00162%20Hawaii%20Open%20Data%20Portal.doc
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/Creating_large_documents_with_Ooo.odt
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/GEF_SGP_Egypt_CPS_OP5.pdf
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/International_water.m4v
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/Pikachu.pdf
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/UNDP_AR2013_english_WEB.pdf
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/dizzy.mp4
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/elevator_ding.mp3
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/meow.mp3
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/oceans.mp4
-http://jnatividad-lt.local/undpdemo/apps/pokemon/docs/raptor-sound.mp3
-http://jnatividad-lt.local/undpdemo/apps/pokemon/pokemon.jpg
-# <MANIFEST: Pokemon
