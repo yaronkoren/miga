@@ -54,7 +54,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 	dbConn.displayDBLoadingProgress( 0, 0, 10, 1, 1 );
 
 	var entitiesCreationSQL = "CREATE TABLE IF NOT EXISTS " + entitiesTableName + " (ID integer, Name text, Category text)";
-	var textCreationSQL = "CREATE TABLE IF NOT EXISTS " + textPropsTableName + " (SubjectID integer, Property text, Object text, FieldType text)";
+	var textCreationSQL = "CREATE TABLE IF NOT EXISTS " + textPropsTableName + " (SubjectID integer, Property text, Object text, FieldType text, AppCached integer)";
 	var numberCreationSQL = "CREATE TABLE IF NOT EXISTS " + numberPropsTableName + " (SubjectID integer, Property text, Object real)";
 	var dateCreationSQL = "CREATE TABLE IF NOT EXISTS " + datePropsTableName + " (SubjectID integer, Property text, Date real)";
 	var coordinateCreationSQL = "CREATE TABLE IF NOT EXISTS " + coordinatePropsTableName + " (SubjectID integer, Property text, Latitude real, Longitude real)";
@@ -128,7 +128,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 					} else if ( columnType == 'Coordinates' ) {
 						insertionSQLStart = "INSERT INTO " + coordinatePropsTableName + " (SubjectID, Property, Latitude, Longitude) VALUES ("
 					} else { // 'Text', 'URL', 'ID', etc.
-						insertionSQLStart = "INSERT INTO " + textPropsTableName + " (SubjectID, Property, Object, FieldType) VALUES ("
+						insertionSQLStart = "INSERT INTO " + textPropsTableName + " (SubjectID, Property, Object, FieldType, AppCached) VALUES ("
 					}
 					if ( columnDescription['isList'] ) {
 						if ( cellValue == null ) {
@@ -208,9 +208,17 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 								// for cacheable resources, we're storing them with a fully-qualified URI
 								// this facilitates the creation of the dynamic cache manifest
 								if (object.length > 0 && ['Video URL', 'Audio URL', 'Image URL', 'Document path'].indexOf(columnType) >= 0 && !absoluteURL.test(object)) {
-									insertionSQL += "'" + gAppSettings['Absolute URL Prefix'] + "/" + encodeURI(object) + "', '" + columnType + "')";
+									var cacheObject = 1;
+									// An asset can be blacklisted from the appcache manifest by adding a "-" in front of the URL
+									// since the appcache is all or nothing, a very big file, or an unsupported format can cause
+									// MigaDV to not use an appcache at all.
+									if (object.charAt(0) == '-') {
+										object = object.substring(1);
+										cacheObject = 0;
+									}
+									insertionSQL += "'" + gAppSettings['Absolute URL Prefix'] + "/" + encodeURI(object) + "', '" + columnType + "', " + cacheObject + ")";
 								} else {
-									insertionSQL += "'" + object + "', '" + columnType + "')";
+									insertionSQL += "'" + object + "', '" + columnType + "', 0 )";
 								}
 								tx.categoryName = categoryName;
 								tx.rowNum = i;
@@ -321,7 +329,9 @@ WebSQLConnector.prototype.loadDataIfNecessary = function( allData ) {
 		tx.executeSql(selectSQL, [],
 			function (tx, results) {
 				// It's already loaded.  Dynamically update the cache manifest
-				dbConn.generateCacheManifest();
+				if (gAppSettings.hasOwnProperty('Generate Manifest') && gAppSettings['Generate Manifest'] == 'true') {
+					dbConn.generateCacheManifest();
+				}
 				setDisplayFromURL();
 			},
 			function (tx, error) {
@@ -336,7 +346,7 @@ WebSQLConnector.prototype.generateCacheManifest = function( allData ) {
 	var dbConn = this;
 	this.db.transaction(function (tx) {
 		// Get all cacheable resources to add to the cache manifest
-		var selectSQL = 'SELECT DISTINCT OBJECT FROM ' + textPropsTableName + " WHERE COALESCE(OBJECT, '') <> '' AND FIELDTYPE IN ('Video URL', 'Audio URL', 'Image URL', 'Document path')";
+		var selectSQL = 'SELECT DISTINCT OBJECT FROM ' + textPropsTableName + " WHERE COALESCE(OBJECT, '') <> '' AND FIELDTYPE IN ('Video URL', 'Audio URL', 'Image URL', 'Document path') AND APPCACHED = 1";
 		tx.executeSql(selectSQL, [],
 			function (tx, results) {
 				// create a list of cacheable resources
@@ -353,7 +363,14 @@ WebSQLConnector.prototype.generateCacheManifest = function( allData ) {
 					listCache += "\n" + gAppSettings['Absolute URL Prefix'] + "/" + gAppSettings['Logo'];
 				}
 				args['listCache'] = listCache;
-				jQuery.post("GenerateManifest.php", args);
+				// do JQuery.ajax call instead of jQuery.post so we can specify sychronous call
+				jQuery.ajax({
+					type: 'POST',
+					url: "GenerateManifest.php",
+					data: args,
+					async: false
+				});
+				window.applicationCache.update();  // tell browser to check if cache.manifest has changed
 			},
 			null
 		);

@@ -9,15 +9,41 @@ CACHE:
 ../NumberUtils.js
 ../WebSQLConnector.js
 # 3rd-party JavaScript files
-../libs/jquery-1.9.0.min.js
+../libs/jquery-1.11.0.min.js
+../libs/markerclusterer.js
+../libs/Viewer.js/compatibility.js
+../libs/Viewer.js/pdf_find_bar.js
+../libs/Viewer.js/pdf_find_controller.js
 ../libs/Viewer.js/ODFViewerPlugin.js
 ../libs/Viewer.js/pdf.js
 ../libs/Viewer.js/PDFViewerPlugin.js
 ../libs/Viewer.js/pdf.worker.js
+../libs/Viewer.js/pdfjsversion.js
 ../libs/Viewer.js/PluginLoader.js
-../libs/Viewer.js/TextLayerBuilder.js
+../libs/Viewer.js/text_layer_builder.js
+../libs/Viewer.js/ui_utils.js
 ../libs/Viewer.js/viewer.js
 ../libs/Viewer.js/webodf.js
+../libs/offline/offline.min.js
+# CSS
+../main.css
+# 3rd-party CSS
+../libs/Viewer.js/example.local.css
+../libs/Viewer.js/PDFViewerPlugin.css
+../libs/Viewer.js/viewer.css
+../libs/Viewer.js/ODFViewerPlugin.css
+../libs/offline/themes/offline-theme-chrome-indicator.css
+../libs/offline/themes/offline-language-english-indicator.css
+# images
+../images/Ajax-loader.gif
+../images/miga-search.png
+../images/Powered-by-Miga.png
+../images/Error.png
+../images/Unavailable.png
+../images/Downloading.png
+../images/OK.png
+../libs/Viewer.js/images/kogmbh.png
+../libs/Viewer.js/images/nlnet.png
 ../libs/Viewer.js/images/texture.png
 ../libs/Viewer.js/images/toolbarButton-download.png
 ../libs/Viewer.js/images/toolbarButton-fullscreen.png
@@ -27,19 +53,10 @@ CACHE:
 ../libs/Viewer.js/images/toolbarButton-presentation.png
 ../libs/Viewer.js/images/toolbarButton-zoomIn.png
 ../libs/Viewer.js/images/toolbarButton-zoomOut.png
-# CSS
-../main.css
-# 3rd-party CSS
-../libs/Viewer.js/example.local.css
-../libs/Viewer.js/PDFViewerPlugin.css
-../libs/Viewer.js/viewer.css
-# images
-../images/Ajax-loader.gif
-../images/miga-search.png
-../images/Powered-by-Miga.png
 NETWORK:
 # everything else
 *
 
 OFFLINE:
 / ./offline.html
+

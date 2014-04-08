@@ -21,6 +21,8 @@ var gPagesInfo = null;
 var gDBConn = null;
 var gMapScriptLoaded = false;
 var gURLHash = window.location.hash;
+var gAppCache = window.applicationCache;
+var gAppCacheState = 'OK';
 
 // Various utility functions that could probably go somewhere else.
 
@@ -965,6 +967,9 @@ function displayItems( mdvState, allItemValues ) {
 	}
 
 	var itemsPerPage = 250;
+	if (!isNaN(gAppSettings['Items per Page'])) {
+		itemsPerPage = +gAppSettings['Items per Page'];
+	}
 	var pageNumsHTML = '';
 	if ( numItems > itemsPerPage ) {
 		pageNumsHTML = pageNavigationHTML( mdvState, numItems, itemsPerPage );
@@ -1051,7 +1056,7 @@ function displayItemValues( itemValues ) {
 		} else if ( propType == 'Document path' ) {
 			if ( objectString != '' ) {
 				// Use Viewer.JS - for either PDF or ODF files
-				objectString = '<p><iframe src="libs/Viewer.js/#' + objectString + '" width="520" height="350" allowfullscreen webkitallowfullscreen></iframe></p>';
+				objectString = '<p><iframe style="text-align:center;" id="viewer" src="libs/Viewer.js/#' + objectString + '" width="520" height="350" allowfullscreen webkitallowfullscreen></iframe></p>';
 			}
 		} else if ( DataLoader.isDateType(propType) ) {
 			objectString = Date.dbStringToDisplayString( objectString );
@@ -1261,6 +1266,7 @@ function displaySearchInput( mdvState ) {
 		window.location = mdvState.getURLHash();
 		return false;
 	});
+	jQuery('#searchText').focus();
 }
 
 function formattedNameInSearchResults( searchText, itemName ) {
@@ -1417,11 +1423,20 @@ function makeRowsClickable() {
 }
 
 function refreshData() {
-	localStorage.removeItem('Miga ' + getURLPath());
-	gAppSettings = null;
-	gDataSchema = null;
-	// Is there a way to do this without a reload?
-	window.location.reload();
+	// check if server is reachable
+	Offline.check();
+	if (Offline.state == 'up') {
+		// it is
+		localStorage.removeItem('Miga ' + getURLPath());
+		gAppSettings = null;
+		gDataSchema = null;
+		// Is there a way to do this without a reload?
+		window.location.reload();
+	} else	{
+		// its not, keep using the offline version
+		alert("Server is not reachable. Please try again later.");
+	}	
+	
 }
 
 function setDisplayFromURL() {
@@ -1459,7 +1474,7 @@ function setDisplayFromURL() {
 
 	jQuery('#poweredBy').html('<a href="http://migadv.com"><img src="images/Powered-by-Miga.png" alt="Powered by Miga" /></a>');
 
-	var refreshDataHTML = '<a href="' + window.location + '">Refresh data.</a>';
+	var refreshDataHTML = '<a href="' + window.location + '">Refresh data.</a> <img id="appCacheIndicator" src="images/' + gAppCacheState + '.png" title="Cache: ' + gAppCacheState +'">';
 	if ( gDataTimestamp != null ) {
 		var curDate = new Date();
 		refreshDataHTML = 'Data was last updated ' + getTimeDifferenceString( gDataTimestamp, curDate.getTime() ) + ' ago. ' + refreshDataHTML;
@@ -1480,5 +1495,45 @@ setInterval(function(){
 }, 200);
 
 window.onload = function(event) {
+	
 	getSettingsAndLoadData();
+	
+	Offline.options = {checks: {xhr: {url: 'images/ping.gif'}}, requests: false };
+	//Offline.options = {checks: {image: {url: 'http://externaldomain/ping.gif'}, active: 'image'}, requests: false}
 }
+
+gAppCache.addEventListener('checking', function(event) {
+	console.log("Checking for updates.");
+	jQuery('#appCacheIndicator').attr('src', 'images/OK.png');
+	gAppCacheState = 'OK';
+}, false);
+
+
+gAppCache.addEventListener('downloading', function(event) {
+	console.log("Started Download.");
+	jQuery('#appCacheIndicator').attr('src', 'images/Downloading.png');
+	gAppCacheState = 'Downloading';
+}, false);
+
+
+gAppCache.addEventListener('progress', function(event) {
+	console.log(event.loaded + " of " + event.total + " downloaded.");
+}, false);
+
+gAppCache.addEventListener('cached', function(event) {
+	console.log("Done.");
+	jQuery('#appCacheIndicator').attr('src', 'images/OK.png');
+	gAppCacheState = 'OK';
+}, false);
+
+gAppCache.addEventListener('obsolete', function(event) {
+	console.log("Obsolete - no resources are cached, and previous cache(s) are now deleted.");
+	jQuery('#appCacheIndicator').attr('src', 'images/Unavailable.png');
+	gAppCacheState = 'Unavailable';
+}, false);
+
+gAppCache.addEventListener('error', function(event) {
+	console.log("error creating appcache.");
+	jQuery('#appCacheIndicator').attr('src', 'images/Unavailable.png');
+	gAppCacheState = 'Unavailable';
+}, false);
