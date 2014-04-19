@@ -236,7 +236,7 @@ function generateDatePropertyValues( dateArray ) {
 			propertyValues.push( curYear + " - " + (curYear + 4) );
 			curYear += 5;
 		}
-	} else if ( yearDifference > 2 ) {
+	} else if ( yearDifference >= 2 ) {
 		// Split into years.
 		var curYear = earliestYear;
 		while ( curYear <= latestYear ) {
@@ -346,8 +346,14 @@ function generateFilterValuesFromDates( dateArray ) {
 
 	if ( len == 1 ) {
 		// Hasty exit
-		var dateString = monthNumberToString( dateArray[0].getMonth() + 1 ) + " " + dateArray[0].getDate() + ", " + dateArray[0].getFullYear()
-		var propertyValues = [{'filterName': dateString, 'numValues': 1}];
+		var dateString;
+		var propertyValues;
+		if ( dateArray[0].hasOwnProperty('yearOnly') ) {
+			dateString = dateArray[0].getFullYear();
+		} else {
+			dataString = monthNumberToString( dateArray[0].getMonth() + 1 ) + " " + dateArray[0].getDate() + ", " + dateArray[0].getFullYear();
+		}
+		propertyValues = [{'filterName': dateString, 'numValues': 1}];
 		return propertyValues;
 	}
 
