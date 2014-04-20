@@ -351,7 +351,7 @@ function generateFilterValuesFromDates( dateArray ) {
 		if ( dateArray[0].hasOwnProperty('yearOnly') ) {
 			dateString = dateArray[0].getFullYear();
 		} else {
-			dataString = monthNumberToString( dateArray[0].getMonth() + 1 ) + " " + dateArray[0].getDate() + ", " + dateArray[0].getFullYear();
+			dateString = monthNumberToString( dateArray[0].getMonth() + 1 ) + " " + dateArray[0].getDate() + ", " + dateArray[0].getFullYear();
 		}
 		propertyValues = [{'filterName': dateString, 'numValues': 1}];
 		return propertyValues;
