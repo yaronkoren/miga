@@ -177,6 +177,8 @@ function monthStringToNumber( monthName ) {
 Date.prototype.greaterThanOrEquals = function( otherDate ) {
 	if ( otherDate.hasOwnProperty('yearOnly') ) {
 		return this.getFullYear() >= otherDate.getFullYear();
+	} else if ( this.hasOwnProperty('yearOnly') ) {
+		return false;
 	} else {
 		return this >= otherDate;
 	}
@@ -236,7 +238,7 @@ function generateDatePropertyValues( dateArray ) {
 			propertyValues.push( curYear + " - " + (curYear + 4) );
 			curYear += 5;
 		}
-	} else if ( yearDifference >= 2 ) {
+	} else if ( yearDifference > 2 ) {
 		// Split into years.
 		var curYear = earliestYear;
 		while ( curYear <= latestYear ) {
@@ -247,11 +249,16 @@ function generateDatePropertyValues( dateArray ) {
 		// Split into months.
 		var curYear = earliestYear;
 		var curMonth = earliestMonth;
+		// Add in year filter values as well, to handle year-only
+		// values.
+		propertyValues.push( curYear );
 		while ( curYear < latestYear || ( curYear == latestYear && curMonth <= latestMonth ) ) {
 			propertyValues.push( monthNumberToString( curMonth ) + " " + curYear );
 			if ( curMonth == 12 ) {
 				curMonth = 1;
 				curYear++;
+				// Year-only filter value.
+				propertyValues.push( curYear );
 			} else {
 				curMonth++;
 			}
@@ -347,18 +354,23 @@ function generateFilterValuesFromDates( dateArray ) {
 	if ( len == 1 ) {
 		// Hasty exit
 		var dateString;
-		var propertyValues;
 		if ( dateArray[0].hasOwnProperty('yearOnly') ) {
 			dateString = dateArray[0].getFullYear();
 		} else {
 			dateString = monthNumberToString( dateArray[0].getMonth() + 1 ) + " " + dateArray[0].getDate() + ", " + dateArray[0].getFullYear();
 		}
-		propertyValues = [{'filterName': dateString, 'numValues': 1}];
+		var propertyValues = [{'filterName': dateString, 'numValues': 1}];
 		return propertyValues;
 	}
 
 	// Create the "buckets".
 	var propertyValues = generateDatePropertyValues( dateArray );
+
+	// If there's only one bucket, put everything in there and exit.
+	if ( propertyValues.length == 1 ) {
+		propertyValues[0]['numValues'] = len;
+		return propertyValues;
+	}
 
 	// Now go through the date values, calculating the number that fit
 	// into each bucket.
@@ -371,8 +383,13 @@ function generateFilterValuesFromDates( dateArray ) {
 	for ( dateNum = 0; dateNum < len; dateNum++ ) {
 		var curDate;
 		if ( dateArray[dateNum] instanceof Date ) {
+			// Why not just set curDate = dateArray[dateNum] ?
+			// I wish I could remember.
 			curDate = new Date();
 			curDate.setTime( dateArray[dateNum].getTime() );
+			if ( dateArray[dateNum].hasOwnProperty('yearOnly') ) {
+				curDate['yearOnly'] = true;
+			}
 		} else {
 			curDate = dateArray[dateNum][0];
 		}
