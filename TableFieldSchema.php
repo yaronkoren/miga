@@ -14,10 +14,11 @@ class TableFieldSchema {
 		if ( strpos($fieldDescription, 'List') === 0 ) {
 			$this->mIsList = true;
 			$matches = array();
-			$foundMatch = preg_match( '/List (.*) of (.*)/', $fieldDescription, $matches);
+			$foundMatch = preg_match( '/List \((.*)\) of (.*)/', $fieldDescription, $matches);
 			if (! $foundMatch) {
 				print "Error!";
 			}
+			$this->mListDelimiter = $matches[1];
 			$typeDescription = $matches[2];
 		} else {
 			$typeDescription = $fieldDescription;
