@@ -134,7 +134,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 						if ( cellValue == null ) {
 							var objectParts = [];
 						} else {
-							var objectParts = cellValue.split(",");
+							var objectParts = cellValue.split(columnDescription['listDelimiter']);
 						}
 					} else {
 						var objectParts = new Array( cellValue );
@@ -263,7 +263,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 						if ( cellValue == null ) {
 							var objectParts = [];
 						} else {
-							var objectParts = cellValue.split(",");
+							var objectParts = cellValue.split(columnDescription['listDelimiter']);
 						}
 					} else {
 						var objectParts = new Array( cellValue );
