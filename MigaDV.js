@@ -245,6 +245,8 @@ function displayTitle( mdvState ) {
 			if ( mdvState.itemName != null ) {
 				documentTitleText += ": " + mdvState.itemName;
 			}
+		} else if ( mdvState.pageName == '_start' ) {
+			// Start page - just show the site name.
 		} else if ( mdvState.pageName != null ) {
 			documentTitleText += ": " + mdvState.pageName;
 		}
@@ -273,10 +275,14 @@ function showCurrentEventsLink( categoryName ) {
 	jQuery('#view-current-' + categoryName).show();
 }
 
-function displayCategorySelector() {
-	displayTitle( null );
+function blankFiltersInfo() {
 	jQuery('#categoryAndSelectedFilters').html("");
 	jQuery('#furtherFiltersWrapper').html("");
+}
+
+function displayCategorySelector() {
+	blankFiltersInfo();
+	displayTitle( null );
 
 	var categoryNames = [];
 	for ( categoryName in gDataSchema ) {
@@ -1305,9 +1311,8 @@ function searchResultInContext( searchText, fullText ) {
 }
 
 function displaySearchResultsScreen( mdvState ) {
+	blankFiltersInfo();
 	displayTitle( mdvState );
-	jQuery('#categoryAndSelectedFilters').html();
-	jQuery('#furtherFiltersWrapper').html();
 	if ( mdvState.searchString == '' ) {
 		displayMainText("<h2>Search</h2>");
 	} else {
@@ -1399,10 +1404,19 @@ function displayValueSearchResults( mdvState, searchResults ) {
 }
 
 function displayPage( mdvState ) {
+	var pageFile;
+	// Special handling for start page
+	if ( mdvState.pageName == '_start' ) {
+		jQuery('#header').hide();
+		blankFiltersInfo();
+		displayMainText('');
+		pageFile = gAppSettings['Start page'];
+	} else {
+		displayMainText( '<h1>' + mdvState.pageName + '</h1>' );
+		pageFile = gPagesInfo[mdvState.pageName]['File'];
+	}
 	displayTitle( mdvState );
-	displayMainText( '<h1>' + mdvState.pageName + '</h1>' );
 
-	var pageFile = gPagesInfo[mdvState.pageName]['File'];
 	var appDirectory = gAppSettings['Directory'];
 	jQuery.get("apps/" + appDirectory + "/" + pageFile, function(text) {
 		addToMainText(text);
@@ -1431,6 +1445,12 @@ function setDisplayFromURL() {
 	mdvState = new MDVState();
 	mdvState.setFromURLHash( gURLHash );
 
+	// Re-show the header, if it might have been hidden for a custom
+	// start page.
+	if ( gAppSettings.hasOwnProperty('Start page') ) {
+		jQuery('#header').show();
+	}
+
 	if ( mdvState.itemID != null ) {
 		window.scrollTo(0,0);
 		displayItem( mdvState.itemID, null );
@@ -1438,7 +1458,12 @@ function setDisplayFromURL() {
 		window.scrollTo(0,0);
 		displayPage( mdvState );
 	} else if ( mdvState.categoryName == null ) {
-		displayCategorySelector();
+		if ( gAppSettings.hasOwnProperty('Start page') ) {
+			mdvState.pageName = '_start';
+			displayPage( mdvState );
+		} else {
+			displayCategorySelector();
+		}
 	} else if ( mdvState.searchString != null ) {
 		window.scrollTo(0,0);
 		displaySearchResultsScreen( mdvState );
