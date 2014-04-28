@@ -283,6 +283,7 @@ function blankFiltersInfo() {
 function displayCategorySelector() {
 	blankFiltersInfo();
 	displayTitle( null );
+	jQuery('#topSearchInput').html('');
 
 	var categoryNames = [];
 	for ( categoryName in gDataSchema ) {
@@ -613,6 +614,7 @@ function pageNavigationHTML( mdvState, numItems, itemsPerPage ) {
 
 function displayItemsScreen( mdvState ) {
 	displayTitle( mdvState );
+	displayTopSearchInput( mdvState );
 	displayCategoryAndSelectedFiltersList( mdvState );
 	displayAdditionalFilters( mdvState );
 
@@ -644,7 +646,6 @@ function displayItemsScreen( mdvState ) {
 		}
 	}
 	gDBConn.displayItems( mdvState, imageProperty, coordinatesProperty, dateProperty, firstTextField, firstEntityField );
-	displaySearchIcon( mdvState.categoryName );
 }
 
 function displayMap( allItemValues ) {
@@ -1141,6 +1142,7 @@ function displayCompoundItemValues( entityValues, itemName ) {
 
 function displayFilterValuesScreen( mdvState ) {
 	displayTitle( mdvState );
+	displayTopSearchInput( mdvState );
 	displayCategoryAndSelectedFiltersList( mdvState );
 	displayAdditionalFilters( mdvState );
 	gDBConn.displayFilterValues( mdvState );
@@ -1245,14 +1247,27 @@ function displayFilterValues( mdvState, filterValues ) {
 	makeRowsClickable();
 }
 
-function displaySearchIcon( categoryName ) {
-	var newDBState = new MDVState();
-	newDBState.categoryName = categoryName;
-	newDBState.searchString = "";
-	jQuery('#searchIcon').html(' <a href="' + newDBState.getURLHash() + '"><img src="images/miga-search.png" /></a>');
+function displayTopSearchInput( mdvState ) {
+	// Eventually, it would be great to also make use of the current set
+	// of selected filters, i.e. use all of mdvState.
+	var newMDVState = new MDVState();
+	newMDVState.categoryName = mdvState.categoryName;
+	if ( mdvState.searchString != undefined ) {
+		newMDVState.searchString = mdvState.searchString;
+	} else {
+		newMDVState.searchString = "";
+	}
+	var text = '<input id="topSearchText" type="search" value="' + newMDVState.searchString + '" size="18" />' + "\n";
+	jQuery('#topSearchInput').html(text);
+	jQuery('#topSearchText').keypress( function(e) {
+		if (e.which == 13) { // "enter" key
+			newMDVState.searchString = jQuery('#topSearchText').val();
+			window.location = newMDVState.getURLHash();
+		}
+	});
 }
 
-function displaySearchInput( mdvState ) {
+function displayBottomSearchInput( mdvState ) {
 	var text = '<div id="searchInput"><input id="searchText" type="text" value="' + mdvState.searchString + '" />' + "\n" +
 		'<input id="searchButton" type="button" value="Search all ' + mdvState.categoryName + '" /></div>' + "\n";
 	jQuery('#searchInputWrapper').html(text);
@@ -1313,6 +1328,10 @@ function searchResultInContext( searchText, fullText ) {
 function displaySearchResultsScreen( mdvState ) {
 	blankFiltersInfo();
 	displayTitle( mdvState );
+	displayTopSearchInput( mdvState );
+	// We just need the category name.
+	displayCategoryAndSelectedFiltersList( mdvState );
+
 	if ( mdvState.searchString == '' ) {
 		displayMainText("<h2>Search</h2>");
 	} else {
@@ -1320,7 +1339,7 @@ function displaySearchResultsScreen( mdvState ) {
 		gDBConn.displayNameSearchResults( mdvState );
 		gDBConn.displayValueSearchResults( mdvState );
 	}
-	displaySearchInput( mdvState );
+	displayBottomSearchInput( mdvState );
 }
 
 function displayNameSearchResults( mdvState, searchResults ) {
@@ -1416,6 +1435,7 @@ function displayPage( mdvState ) {
 		pageFile = gPagesInfo[mdvState.pageName]['File'];
 	}
 	displayTitle( mdvState );
+	jQuery('#topSearchInput').html('');
 
 	var appDirectory = gAppSettings['Directory'];
 	jQuery.get("apps/" + appDirectory + "/" + pageFile, function(text) {

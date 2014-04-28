@@ -21,13 +21,8 @@ a:active {
 
 /* Top elements */
 
-div#logoAndIcons {
-	float: left;
-	max-width: 25%;
-}
-
 div#logo {
-	width: 100%;
+	float: left;
 }
 
 div#logo img {
@@ -40,7 +35,7 @@ div#title {
 	padding: 10px;
 	text-align: center;
 	display: inline-block;
-	max-width: 25%;
+	max-width: 30%;
 }
 
 div#title a {
@@ -53,11 +48,9 @@ div#title a:hover {
 }
 
 div#categoryAndSelectedFilters {
-	text-align: right;
-	font-size: x-large;
-	float: right;
+	clear: both;
+	font-size: larger;
 	padding: 15px;
-	max-width: 40%;
 }
 
 div#categoryAndSelectedFilters a {
@@ -106,16 +99,18 @@ ul#selectedFilters li a:hover {
 	text-decoration: underline;
 }
 
-div#logo {
-}
-
-div#navIcons {
+div#navBar {
+	float: right;
 	margin-top: 15px;
-	margin-bottom: 7px;
+	margin-right: 5px;
 }
 
-span#searchIcon {
-	margin-left: 5px;
+input#topSearchText {
+	/* Copied from http://www.paulund.co.uk/how-to-create-pretty-search-forms */
+	background: #fafafa url('./images/miga-search.png') no-repeat 8px 8px;
+	-moz-border-radius: 15px;
+	border-radius: 15px;
+	padding: 6px 15px 6px 30px;
 }
 
 /* "Further filters" bar */
