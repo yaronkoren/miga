@@ -627,7 +627,25 @@ WebSQLConnector.prototype.getSQLQuery = function( mdvState, imageProperty, coord
 			whereClause += " AND " + secondaryPropertiesTableAlias + ".Property = '" + secondaryProperty + "'";
 			whereClause += " AND " + objectField + " = '" + escapedPropValue + "'";
 		} else {
-			whereClause += " AND " + objectField + " = '" + escapedPropValue + "'";
+			// Regular text.
+			// If this contains a "form feed" character, it's an
+			// array - split it up into values, and do an OR on
+			// each one.
+			var obscureChar = decodeURI('%0C');
+			if ( escapedPropValue.indexOf(obscureChar) > -1 ) {
+				whereClause += " AND " + objectField + " IN ('";
+				var propValuesArray = escapedPropValue.split(obscureChar);
+				var numPropValueParts = propValuesArray.length;
+				for ( propValuePartNum = 0; propValuePartNum < numPropValueParts; propValuePartNum++ ) {
+					if ( propValuePartNum > 0 ) {
+						whereClause += "', '";
+					}
+					whereClause += propValuesArray[propValuePartNum];
+				}
+				whereClause += "')";
+			} else {
+				whereClause += " AND " + objectField + " = '" + escapedPropValue + "'";
+			}
 		}
 		if ( filterType != 'Compound' ) {
 			whereClause += " AND " + tableAlias + ".Property = '" + filterName + "'";

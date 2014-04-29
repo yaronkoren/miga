@@ -240,6 +240,8 @@ function displayTitle( mdvState ) {
 		var documentTitleText = gAppSettings['Name'];
 		if ( mdvState == null ) {
 			// Do nothing
+		} else if ( mdvState.useSearchForm ) {
+			documentTitleText += ": Search";
 		} else if ( mdvState.categoryName != null ) {
 			//documentTitleText += ": " + mdvState.categoryName;
 			if ( mdvState.itemName != null ) {
@@ -360,7 +362,11 @@ function displayCategorySelector() {
 function displayCategoryAndSelectedFiltersList( mdvState ) {
 	var mdvStateForCategory = new MDVState();
 	mdvStateForCategory.categoryName = mdvState.categoryName;
-	var categoryDisplay = '<strong><a href="' + mdvStateForCategory.getURLHash() + '">' + mdvStateForCategory.categoryName + '</a></strong>';
+	if ( mdvState.showSearchFormResults ) {
+		var categoryDisplay = '<strong>' + mdvStateForCategory.categoryName + '</strong>';
+	} else {
+		var categoryDisplay = '<strong><a href="' + mdvStateForCategory.getURLHash() + '">' + mdvStateForCategory.categoryName + '</a></strong>';
+	}
 
 	var filtersDisplay = '<ul id="selectedFilters">';
 	if ( mdvState.currentEventsOnly ) {
@@ -371,15 +377,19 @@ function displayCategoryAndSelectedFiltersList( mdvState ) {
 	for ( var propName in selectedFilters ) {
 		filterNum++;
 		filtersDisplay += "<li>";
-		var propValueDisplay = selectedFilters[propName];
+		var propValueParts = selectedFilters[propName].split(decodeURI('%0C'));
+		var propValueDisplay = '<strong>' + propValueParts.join('</strong> or <strong>') + '</strong>';
+
 		if ( selectedFilters[propName] == '__null' ) {
 			propValueDisplay = "<em>No value</em>";
 		}
 		if ( filterNum > 1 ) { filtersDisplay += '& '; }
-		filtersDisplay += propName + " = <strong>" + propValueDisplay + "</strong> ";
-		var newDBState = mdvState.clone();
-		delete newDBState.selectedFilters[propName];
-		filtersDisplay += '<a href="' + newDBState.getURLHash() + '">[&#10005;]</a>';
+		filtersDisplay += propName + " = " + propValueDisplay;
+		if ( ! mdvState.showSearchFormResults ) {
+			var newDBState = mdvState.clone();
+			delete newDBState.selectedFilters[propName];
+			filtersDisplay += '<a href="' + newDBState.getURLHash() + '">[&#10005;]</a>';
+		}
 		filtersDisplay += "</li>";
 	}
 	filtersDisplay += "</ul>";
@@ -387,7 +397,7 @@ function displayCategoryAndSelectedFiltersList( mdvState ) {
 	jQuery('#categoryAndSelectedFilters').html( categoryDisplay + filtersDisplay );
 }
 
-function displayAdditionalFilters( mdvState ) {
+function getUnusedFilters( mdvState ) {
 	var categoryHeaders = [];
 	categoryFields = gDataSchema[mdvState.categoryName]['fields'];
 	for ( fieldName in categoryFields ) {
@@ -408,6 +418,11 @@ function displayAdditionalFilters( mdvState ) {
 			furtherFilters.push(filterName);
 		}
 	}
+	return furtherFilters;
+}
+
+function displayAdditionalFilters( mdvState ) {
+	var furtherFilters = getUnusedFilters( mdvState );
 
 	// This code needs to be improved a lot!
 	// We're looking for "connector" categories - categories other than
@@ -612,12 +627,74 @@ function pageNavigationHTML( mdvState, numItems, itemsPerPage ) {
 		return msg;
 }
 
-function displayItemsScreen( mdvState ) {
-	displayTitle( mdvState );
-	displayTopSearchInput( mdvState );
-	displayCategoryAndSelectedFiltersList( mdvState );
-	displayAdditionalFilters( mdvState );
+function displaySearchFormInput( mdvState, filterValues ) {
+	var msg = '';
+	var len = filterValues.length;
+	for (var i = 0; i < len; i++) {
+		var curFilter = filterValues[i];
+		// 'numValues' is really the number of *items*, and 'filterName'
+		// is really the filter *value*... oh well.
+		var numValues = curFilter['numValues'];
+		if ( numValues == 0 ) continue;
+		var filterValue = curFilter['filterName'];
+		if ( filterValue == null ) {
+			continue;
+		}
+		msg += ' <span class="searchFormCheckbox"><label><input type="checkbox" class="searchFormCheckbox" filtername="' + mdvState.displayFilter + '" filtervalue="' + filterValue + '" />' + filterValue + '</label></span>';
+	}
+	jQuery('#searchFormInput-' + mdvState.displayFilter.replace(' ', '-')).html(msg);
+}
 
+function displaySearchForm( mdvState ) {
+	displayTitle( mdvState );
+	blankFiltersInfo();
+	var msg = "<h1>Search</h1>\n";
+	msg += "<form>\n";
+	var allFilters = getUnusedFilters( mdvState );
+	msg += '<div id="searchInputs">';
+	for ( var i = 0; i < allFilters.length; i++ ) {
+		var filterName = allFilters[i];
+		msg += '<div class="searchFormInput">';
+		msg += '<h2>' + filterName + "</h2>\n";
+		msg += '<div id="searchFormInput-' + filterName.replace(' ', '-') + '">';
+		var newMDVState = mdvState.clone();
+		newMDVState.displayFilter = filterName;
+		gDBConn.displayFilterValues( newMDVState );
+		msg += "</div>";
+		msg += "</div>";
+	}
+	msg += "</div>";
+	msg += '<input type="button" value="Search" onclick="handleSubmittedSearchForm(mdvState, this.form)">';
+	msg += "</form>";
+	displayMainText(msg);
+}
+
+function handleSubmittedSearchForm( mdvState, form ) {
+	jQuery(".searchFormCheckbox").each( function() {
+		if ( $(this).prop('checked') ) {
+			var filterName = $(this).attr('filtername');
+			var filterValue = $(this).attr('filtervalue');
+			if ( mdvState.selectedFilters.hasOwnProperty(filterName) ) {
+				// Use an obscure character to separate the
+				// values - a "form feed".
+				mdvState.selectedFilters[filterName] += decodeURI('%0C') + filterValue;
+			} else {
+				mdvState.selectedFilters[filterName] = filterValue;
+			}
+		}
+	});
+	mdvState.useSearchForm = false;
+	mdvState.showSearchFormResults = true;
+	window.location = mdvState.getURLHash();
+}
+
+function displaySearchFormResults( mdvState ) {
+	displayCategoryAndSelectedFiltersList( mdvState );
+	getDisplayDetailsAndDisplayItems( mdvState );
+	
+}
+
+function getDisplayDetailsAndDisplayItems( mdvState ) {
 	var imageProperty = null;
 	var firstTextField = null;
 	var firstEntityField = null;
@@ -646,6 +723,14 @@ function displayItemsScreen( mdvState ) {
 		}
 	}
 	gDBConn.displayItems( mdvState, imageProperty, coordinatesProperty, dateProperty, firstTextField, firstEntityField );
+}
+
+function displayItemsScreen( mdvState ) {
+	displayTitle( mdvState );
+	displayTopSearchInput( mdvState );
+	displayCategoryAndSelectedFiltersList( mdvState );
+	displayAdditionalFilters( mdvState );
+	getDisplayDetailsAndDisplayItems( mdvState );
 }
 
 function displayMap( allItemValues ) {
@@ -1168,9 +1253,14 @@ function filterValuesHaveNumericalVariation( filterValues ) {
 }
 
 function displayFilterValues( mdvState, filterValues ) {
+	// If we're in the search form, display something completely different
+	if ( mdvState.useSearchForm ) {
+		displaySearchFormInput( mdvState, filterValues );
+		return;
+	}
+
 	displayMainText('');
 	var msg = "<p>Values for <strong>" + mdvState.displayFilter + "</strong>:</p>\n"
-	addToMainText( msg );
 
 	// This is the 'type' of the filter - String, Number, Date, etc.
 	var filterType = mdvState.getDisplayFilterType();
@@ -1180,7 +1270,7 @@ function displayFilterValues( mdvState, filterValues ) {
 	// Skip over all filter display format stuff if there's only one
 	// filter value.
 	if ( len <= 1 ) {
-		msg = "<div id=\"filterValuesList\" class=\"cells\">\n";
+		msg += "<div id=\"filterValuesList\" class=\"cells\">\n";
 	} else {
 		if ( filterType != 'Number' ) {
 			setTrueFilterDisplayFormat( mdvState, hasNumericalVariation );
@@ -1205,7 +1295,7 @@ function displayFilterValues( mdvState, filterValues ) {
 		*/
 		}
 		var mainClass = ( mdvState.filterDisplayFormat == 'alphabetical' ) ? 'cells' : 'rows';
-		msg = "<div id=\"filterValuesList\" class=\"" + mdvState.filterDisplayFormat + "Display " + mainClass + "\">\n";
+		msg += "<div id=\"filterValuesList\" class=\"" + mdvState.filterDisplayFormat + "Display " + mainClass + "\">\n";
 
 	}
 
@@ -1477,6 +1567,10 @@ function setDisplayFromURL() {
 	} else if ( mdvState.pageName != null ) {
 		window.scrollTo(0,0);
 		displayPage( mdvState );
+	} else if ( mdvState.useSearchForm ) {
+		displaySearchForm( mdvState );
+	} else if ( mdvState.showSearchFormResults ) {
+		displaySearchFormResults( mdvState );
 	} else if ( mdvState.categoryName == null ) {
 		if ( gAppSettings.hasOwnProperty('Start page') ) {
 			mdvState.pageName = '_start';

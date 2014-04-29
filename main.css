@@ -418,6 +418,12 @@ span.trueSearchText {
 	font-weight: bold;
 }
 
+span.searchFormCheckbox {
+	display: inline-block;
+	padding-right: 6px;
+	padding-bottom: 3px;
+}
+
 /* "Powered by" button */
 div#poweredBy {
 	padding: 12px 0 12px 0;
