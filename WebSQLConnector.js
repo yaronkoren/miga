@@ -809,8 +809,12 @@ WebSQLConnector.prototype.displayItems = function( mdvState, imageProperty, coor
 	});
 }
 
-WebSQLConnector.prototype.displayFilterValues = function( mdvState ) {
+WebSQLConnector.prototype.displayFilterValues = function( origMDVState ) {
 	var dbConn = this;
+	var mdvState = origMDVState.clone();
+	if ( mdvState.useSearchForm ) {
+		mdvState.selectedFilters = [];
+	}
 	this.db.transaction(function (tx) {
 		var selectSQL = dbConn.getSQLQuery( mdvState );
 		tx.executeSql(selectSQL, [],
@@ -857,7 +861,7 @@ WebSQLConnector.prototype.displayFilterValues = function( mdvState ) {
 						filterValues.push( curFilter );
 					}
 				}
-				displayFilterValues( mdvState, filterValues );
+				displayFilterValues( origMDVState, filterValues );
 			},
 			dbConn.errorHandler
 		);

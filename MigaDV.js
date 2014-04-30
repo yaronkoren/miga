@@ -388,7 +388,7 @@ function displayCategoryAndSelectedFiltersList( mdvState ) {
 		if ( ! mdvState.showSearchFormResults ) {
 			var newDBState = mdvState.clone();
 			delete newDBState.selectedFilters[propName];
-			filtersDisplay += '<a href="' + newDBState.getURLHash() + '">[&#10005;]</a>';
+			filtersDisplay += ' <a href="' + newDBState.getURLHash() + '">[&#10005;]</a>';
 		}
 		filtersDisplay += "</li>";
 	}
@@ -414,7 +414,7 @@ function getUnusedFilters( mdvState ) {
 			continue;
 		}
 
-		if ( mdvState.selectedFilters[filterName] == null || DataLoader.isDateType(filterAttribs['fieldType']) || filterAttribs['fieldType'] == 'Number' ) {
+		if ( mdvState.useSearchForm || mdvState.selectedFilters[filterName] == null || DataLoader.isDateType(filterAttribs['fieldType']) || filterAttribs['fieldType'] == 'Number' ) {
 			furtherFilters.push(filterName);
 		}
 	}
@@ -640,7 +640,15 @@ function displaySearchFormInput( mdvState, filterValues ) {
 		if ( filterValue == null ) {
 			continue;
 		}
-		msg += ' <span class="searchFormCheckbox"><label><input type="checkbox" class="searchFormCheckbox" filtername="' + mdvState.displayFilter + '" filtervalue="' + filterValue + '" />' + filterValue + '</label></span>';
+		var filterName = mdvState.displayFilter;
+		var selectedValuesForCurFilter = [];
+		if ( mdvState.selectedFilters.hasOwnProperty(filterName) ) {
+			selectedValuesForCurFilter = mdvState.selectedFilters[filterName].split(decodeURI('%0C'));
+		}
+		msg += ' <span class="searchFormCheckbox"><label><input type="checkbox" class="searchFormCheckbox" filtername="' + filterName + '" filtervalue="' + filterValue + '"';
+		var checked = ( jQuery.inArray( filterValue, selectedValuesForCurFilter ) > -1 );
+		if ( checked ) { msg += ' checked'; }
+		msg += ' />' + filterValue + '</label></span>';
 	}
 	jQuery('#searchFormInput-' + mdvState.displayFilter.replace(' ', '-')).html(msg);
 }
@@ -670,6 +678,7 @@ function displaySearchForm( mdvState ) {
 }
 
 function handleSubmittedSearchForm( mdvState, form ) {
+	mdvState.selectedFilters = [];
 	jQuery(".searchFormCheckbox").each( function() {
 		if ( $(this).prop('checked') ) {
 			var filterName = $(this).attr('filtername');
@@ -683,6 +692,7 @@ function handleSubmittedSearchForm( mdvState, form ) {
 			}
 		}
 	});
+	window.location = mdvState.getURLHash();
 	mdvState.useSearchForm = false;
 	mdvState.showSearchFormResults = true;
 	window.location = mdvState.getURLHash();
