@@ -24,6 +24,9 @@ function MDVState( categoryName, selectedFilters, displayFilter, searchString, p
 	this.filterDisplayFormat = null;
 	this.currentEventsOnly = false;
 	this.upcomingEventsOnly = false;
+
+	this.useSearchForm = false;
+	this.showSearchFormResults = false;
 }
 
 /**
@@ -63,7 +66,14 @@ MDVState.prototype.setFromURLHash = function( hash ) {
 		}
 
 		var hashPartParts = hashParts[i].split('=');
-		if ( hashPartParts.length != 2 ) {
+		if ( hashPartParts.length == 1 ) {
+			if ( hashParts[i] == '_search' ) {
+				this.useSearchForm = true;
+			} else if ( hashParts[i] == '_searchResults' ) {
+				this.showSearchFormResults = true;
+			}
+			continue;
+		} else if ( hashPartParts.length > 2 ) {
 
 			// Just ignore this.
 			continue;
@@ -97,15 +107,20 @@ MDVState.prototype.setFromURLHash = function( hash ) {
 }
 
 MDVState.prototype.getURLHash = function() {
-	var hash = "";
+	var hash = "#";
+	if ( this.useSearchForm ) {
+		hash += "_search/";
+	} else if ( this.showSearchFormResults ) {
+		hash += "_searchResults/";
+	}
 	if ( this.categoryName != null ) {
-		hash += "#_cat=" + encodeURIComponent(this.categoryName);
+		hash += "_cat=" + encodeURIComponent(this.categoryName);
 	}
 	if ( this.itemID != null ) {
-		hash += "#_item=" + this.itemID;
+		hash += "_item=" + this.itemID;
 	}
 	if ( this.pageName != null ) {
-		hash += "#_page=" + encodeURIComponent(this.pageName);
+		hash += "_page=" + encodeURIComponent(this.pageName);
 	}
 	if ( this.displayFormat != null && this.displayFormat != '' ) {
 		hash += "/_format=" + this.displayFormat;
