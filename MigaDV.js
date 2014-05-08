@@ -1571,6 +1571,23 @@ function setDisplayFromURL() {
 		jQuery('#header').show();
 	}
 
+	// Show the custom header and footer, if either exist.
+	if ( gAppSettings.hasOwnProperty('Header file') ) {
+		var appDirectory = gAppSettings['Directory'];
+		var headerFile = gAppSettings['Header file'];
+		jQuery.get("apps/" + appDirectory + "/" + headerFile, function(text) {
+			jQuery('#header').html( text );
+		});
+	}
+
+	if ( gAppSettings.hasOwnProperty('Footer file') ) {
+		var appDirectory = gAppSettings['Directory'];
+		var footerFile = gAppSettings['Footer file'];
+		jQuery.get("apps/" + appDirectory + "/" + footerFile, function(text) {
+			jQuery('#footer').html( text );
+		});
+	}
+
 	if ( mdvState.itemID != null ) {
 		window.scrollTo(0,0);
 		displayItem( mdvState.itemID, null );
