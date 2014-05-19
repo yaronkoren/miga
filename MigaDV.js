@@ -278,8 +278,8 @@ function showCurrentEventsLink( categoryName ) {
 }
 
 function blankFiltersInfo() {
-	jQuery('#categoryAndSelectedFilters').html("");
 	jQuery('#furtherFiltersWrapper').html("");
+	jQuery('#categoryAndSelectedFilters').hide();
 }
 
 function displayCategorySelector() {
@@ -394,6 +394,8 @@ function displayCategoryAndSelectedFiltersList( mdvState ) {
 	}
 	filtersDisplay += "</ul>";
 
+	// Re-show, in case it was hidden.
+	jQuery('#categoryAndSelectedFilters').show();
 	jQuery('#categoryAndSelectedFilters').html( categoryDisplay + filtersDisplay );
 }
 
@@ -553,7 +555,11 @@ function setTrueFilterDisplayFormat( mdvState, hasNumericalVariation ) {
 	} else {
 		if ( mdvState.filterDisplayFormat == null ) {
 			if ( hasNumericalVariation ) {
-				mdvState.filterDisplayFormat = 'number';
+				if ( gAppSettings.hasOwnProperty('Hide quantity tab') && gAppSettings['Hide quantity tab'] == 'true' ) {
+					mdvState.filterDisplayFormat = 'alphabetical';
+				} else {
+					mdvState.filterDisplayFormat = 'number';
+				}
 			} else {
 				mdvState.filterDisplayFormat = 'alphabetical';
 			}
@@ -563,7 +569,15 @@ function setTrueFilterDisplayFormat( mdvState, hasNumericalVariation ) {
 
 
 function displayFilterFormatTabs( mdvState ) {
+	// If we're supposed to hide the quantity/number tab, it means no
+	// tabs will be shown - just exit. If the display ever had more than
+	// two tabs, though, this would have to change.
+	if ( gAppSettings.hasOwnProperty('Hide quantity tab') && gAppSettings['Hide quantity tab'] == 'true' ) {
+		return;
+	}
+
 	var filterType = mdvState.getDisplayFilterType();
+
 	if ( DataLoader.isDateType(filterType) ) {
 		//if ( mdvState.filterDisplayFormat == null ) {
 		//	mdvState.filterDisplayFormat = 'date';
@@ -610,8 +624,8 @@ function displayFilterFormatTabs( mdvState ) {
 }
 
 function pageNavigationHTML( mdvState, numItems, itemsPerPage ) {
-		msg = "<p>Go to page:</p>";
-		msg += '<ul id="pageNumbers">';
+		msg = '<ul id="pageNumbers">';
+		msg += '<li id="pageNumbersLabel">Go to page:</li>';
 		numPages = Math.ceil( numItems / itemsPerPage );
 		if ( mdvState.pageNum == null ) mdvState.pageNum = 1;
 		for ( var curPage = 1; curPage <= numPages; curPage++ ) {
@@ -1073,7 +1087,7 @@ function displayItems( mdvState, allItemValues ) {
 		addToMainText( pageNumsHTML );
 		var firstItemToShow = ( ( mdvState.pageNum - 1 ) * itemsPerPage ) + 1;
 		var lastItemToShow = Math.min( itemsPerPage * mdvState.pageNum, numItems );
-		msg = "<p>" + numItems + " results found; showing results <strong>" + firstItemToShow + " - " + lastItemToShow + "</strong>.</p>\n";
+		msg = "<p>" + numItems + " results found; showing <strong>" + firstItemToShow + " - " + lastItemToShow + "</strong>.</p>\n";
 	} else {
 		var firstItemToShow = 1;
 		var lastItemToShow = numItems;
@@ -1105,7 +1119,7 @@ function displayItems( mdvState, allItemValues ) {
 }
 
 function displayItemTitle( itemName ) {
-	jQuery('#furtherFiltersWrapper').html("<h1>" + itemName + "</h1>");
+	jQuery('#pageTitle').html("<h1>" + itemName + "</h1>");
 }
 
 function linkToItemHTML( itemID, itemName ) {
@@ -1304,7 +1318,7 @@ function displayFilterValues( mdvState, filterValues ) {
 			}
 		*/
 		}
-		var mainClass = ( mdvState.filterDisplayFormat == 'alphabetical' ) ? 'cells' : 'rows';
+		var mainClass = ( mdvState.filterDisplayFormat == 'alphabetical' || mdvState.filterDisplayFormat == 'date' ) ? 'cells' : 'rows';
 		msg += "<div id=\"filterValuesList\" class=\"" + mdvState.filterDisplayFormat + "Display " + mainClass + "\">\n";
 
 	}
@@ -1357,7 +1371,7 @@ function displayTopSearchInput( mdvState ) {
 	} else {
 		newMDVState.searchString = "";
 	}
-	var text = '<input id="topSearchText" type="search" value="' + newMDVState.searchString + '" size="18" />' + "\n";
+	var text = '<input id="topSearchText" type="search" value="' + newMDVState.searchString + '" size="10" />' + "\n";
 	jQuery('#topSearchInput').html(text);
 	jQuery('#topSearchText').keypress( function(e) {
 		if (e.which == 13) { // "enter" key
@@ -1524,6 +1538,10 @@ function displayValueSearchResults( mdvState, searchResults ) {
 
 function displayPage( mdvState ) {
 	var pageFile;
+
+	// Set class for this page, to allow custom CSS.
+	jQuery('body').attr( 'class', "page-" + mdvState.pageName );
+
 	// Special handling for start page
 	if ( mdvState.pageName == '_start' ) {
 		jQuery('#header').hide();
@@ -1535,6 +1553,7 @@ function displayPage( mdvState ) {
 		pageFile = gPagesInfo[mdvState.pageName]['File'];
 	}
 	displayTitle( mdvState );
+
 	jQuery('#topSearchInput').html('');
 
 	var appDirectory = gAppSettings['Directory'];
@@ -1565,6 +1584,11 @@ function setDisplayFromURL() {
 	mdvState = new MDVState();
 	mdvState.setFromURLHash( gURLHash );
 
+	//var onStartPage = ( mdvState.pageName == '_start' &&
+	//	gAppSettings.hasOwnProperty('Start page') );
+	jQuery('body').removeAttr( 'class' );
+	jQuery('#pageTitle').html('');
+
 	// Re-show the header, if it might have been hidden for a custom
 	// start page.
 	if ( gAppSettings.hasOwnProperty('Start page') ) {
@@ -1592,19 +1616,19 @@ function setDisplayFromURL() {
 		window.scrollTo(0,0);
 		displayItem( mdvState.itemID, null );
 	} else if ( mdvState.pageName != null ) {
-		window.scrollTo(0,0);
-		displayPage( mdvState );
+		if ( mdvState.pageName != '_start' || gAppSettings.hasOwnProperty('Start page') ) {
+			window.scrollTo(0,0);
+			displayPage( mdvState );
+		} else {
+			displayCategorySelector();
+		}
 	} else if ( mdvState.useSearchForm ) {
 		displaySearchForm( mdvState );
 	} else if ( mdvState.showSearchFormResults ) {
 		displaySearchFormResults( mdvState );
 	} else if ( mdvState.categoryName == null ) {
-		if ( gAppSettings.hasOwnProperty('Start page') ) {
-			mdvState.pageName = '_start';
-			displayPage( mdvState );
-		} else {
-			displayCategorySelector();
-		}
+		// Is this needed?
+		displayCategorySelector();
 	} else if ( mdvState.searchString != null ) {
 		window.scrollTo(0,0);
 		displaySearchResultsScreen( mdvState );
