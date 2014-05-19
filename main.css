@@ -23,6 +23,7 @@ a:active {
 
 div#logo {
 	float: left;
+	max-width: 25%
 }
 
 div#logo img {
@@ -30,12 +31,10 @@ div#logo img {
 }
 
 div#title {
-	font-size: x-large;
+	font-size: 36px;
 	font-weight: bold;
 	padding: 10px;
 	text-align: center;
-	display: inline-block;
-	max-width: 30%;
 }
 
 div#title a {
@@ -48,12 +47,14 @@ div#title a:hover {
 }
 
 div#categoryAndSelectedFilters {
-	clear: both;
-	font-size: larger;
+	font-size: 20px;
 	padding: 15px;
+	border-bottom: 2px solid #1b6e22;
+	margin-bottom: 25px;
 }
 
 div#categoryAndSelectedFilters a {
+	color: #22812A;
 	text-decoration: none;
 }
 
@@ -108,21 +109,24 @@ div#navBar {
 input#topSearchText {
 	/* Copied from http://www.paulund.co.uk/how-to-create-pretty-search-forms */
 	background: #fafafa url('./images/miga-search.png') no-repeat 8px 8px;
-	-moz-border-radius: 15px;
 	border-radius: 15px;
 	padding: 6px 15px 6px 30px;
 }
 
 /* "Further filters" bar */
 
+div#furtherFiltersWrapper {
+	clear: both;
+	padding-top: 10px;
+}
+
 div#furtherFilters {
 	padding: 7px 7px 7px 7px;
-	border-top: 1px #bbb solid;
-	border-bottom: 1px #bbb solid;
 	background: #1b6e22;
+	border-radius: 5px;
 	font-size: large;
 	line-height: 30px;
-	color: #ddd;
+	color: #CDCEC1;
 }
 
 div#furtherFilters span {
@@ -136,7 +140,7 @@ div#furtherFilters span.clickable {
 }
 
 div#furtherFilters span.clickable:hover {
-	background: #05580c;
+	background: #03520A;
 }
 
 div#furtherFilters a.compoundFilterName {
@@ -219,7 +223,7 @@ table.listElement tr td {
 table.listElement img {
 	float: left;
 	padding-right: 5px;
-	width: 55px;
+	max-width: 55px;
 }
 
 li.clickable {
@@ -241,12 +245,22 @@ ul#pageNumbers {
 ul#pageNumbers li {
 	padding: 6px 9px 6px 9px;
 	margin: 5px;
-	border: 2px #754878 solid;
+	border: 1px #A59C6D solid;
 	display: inline-block;
 }
 
+ul#pageNumbers li#pageNumbersLabel {
+	border: none;
+	padding-left: 0;
+	margin-left: 0;
+}
+
 ul#pageNumbers li.clickable {
-	background: #F899FF;
+	background: #FAEBA0;
+}
+
+ul#pageNumbers li.clickable:hover {
+	background: #DBCE8C;
 }
 
 /* List of categories/pages in start screen */
@@ -372,7 +386,7 @@ ul.compoundEntityInfo {
 	border-radius: 9px;
 	padding: 10px;
 	margin: 7px 3px 12px 3px;
-	background: #eee;
+	background: #E6E8FD;
 	list-style-type: none;
 	/*font-size: smaller;*/
 }
@@ -468,7 +482,7 @@ div#refreshData {
 
 @media screen and (max-width: 700px) {
 	div#title {
-		font-size: large;
+		font-size: 28px;
 	}
 	div#categoryAndSelectedFilters {
 		font-size: large;
@@ -481,7 +495,7 @@ div#refreshData {
 
 @media screen and (max-width: 550px) {
 	div#title {
-		font-size: medium;
+		font-size: 16px;
 	}
 	div#categoryAndSelectedFilters {
 		font-size: medium;
