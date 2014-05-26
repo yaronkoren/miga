@@ -28,6 +28,12 @@ function getURLPath() {
 	return window.location.host + window.location.pathname + window.location.search;
 }
 
+function HTMLEscapeString( str ) {
+	// Bizarrely, JS does not contain an HTML-escaping function, and
+	// jQuery can only do it via the DOM, so we'll just have one here.
+	return str.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;');
+}
+
 function androidOnlyAlert( msg ) {
 	// For now, don't do anything - the Android-only alert may no
 	// longer be useful.
@@ -662,12 +668,14 @@ function displaySearchFormInput( mdvState, filterValues ) {
 		msg += ' <span class="searchFormCheckbox"><label><input type="checkbox" class="searchFormCheckbox" filtername="' + filterName + '" filtervalue="' + filterValue + '"';
 		var checked = ( jQuery.inArray( filterValue, selectedValuesForCurFilter ) > -1 );
 		if ( checked ) { msg += ' checked'; }
-		msg += ' />' + filterValue + '</label></span>';
+		var escapedFilterValue = HTMLEscapeString( filterValue );
+		msg += ' />' + escapedFilterValue + '</label></span>';
 	}
 	jQuery('#searchFormInput-' + mdvState.displayFilter.replace(' ', '-')).html(msg);
 }
 
 function displaySearchForm( mdvState ) {
+	var categorySchema = gDataSchema[mdvState.categoryName]['fields'];
 	displayTitle( mdvState );
 	blankFiltersInfo();
 	var msg = "<h1>Search</h1>\n";
@@ -676,6 +684,13 @@ function displaySearchForm( mdvState ) {
 	msg += '<div id="searchInputs">';
 	for ( var i = 0; i < allFilters.length; i++ ) {
 		var filterName = allFilters[i];
+
+		// For now, we only search on fields of type Text or Entity.
+		var filterType = categorySchema[filterName]['fieldType'];
+		if ( filterType != 'Text' && filterType != 'Entity' ) {
+			continue;
+		}
+
 		msg += '<div class="searchFormInput">';
 		msg += '<h2>' + filterName + "</h2>\n";
 		msg += '<div id="searchFormInput-' + filterName.replace(' ', '-') + '">';
@@ -1125,7 +1140,7 @@ function displayItemTitle( itemName ) {
 function linkToItemHTML( itemID, itemName ) {
 	var mdvState = new MDVState();
 	mdvState.itemID = itemID;
-	return '<a href="' + mdvState.getURLHash() + '">' + itemName + '</a>';
+	return '<a href="' + mdvState.getURLHash() + '">' + HTMLEscapeString( itemName ) + '</a>';
 }
 
 function displayItemValues( itemValues ) {
@@ -1146,6 +1161,7 @@ function displayItemValues( itemValues ) {
 			// Some text-manipulation - maybe this should be done
 			// for all types.
 			objectString = objectString.replace("\n", '<br />');
+			objectString = HTMLEscapeString( objectString );
 		} else if ( propType == 'URL' ) {
 			if ( objectString != '' ) {
 				objectString = '<a href="' + objectString + '">' + objectString + '</a>';
@@ -1337,7 +1353,7 @@ function displayFilterValues( mdvState, filterValues ) {
 			filterNameDisplay = numberRange.toDisplayString();
 			filterHash = filterName.toString();
 		} else {
-			filterNameDisplay = filterName.toString();
+			filterNameDisplay = HTMLEscapeString( filterName.toString() );
 			filterHash = filterName.toString();
 		}
 		var rowDisplay = '<strong>' + filterNameDisplay + "</strong> (" + curFilter['numValues'] + ")";
