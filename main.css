@@ -49,7 +49,7 @@ div#title a:hover {
 div#categoryAndSelectedFilters {
 	font-size: 20px;
 	padding: 15px;
-	border-bottom: 2px solid #1b6e22;
+	border-bottom: 2px solid #2F5A33;
 	margin-bottom: 25px;
 }
 
@@ -122,7 +122,7 @@ div#furtherFiltersWrapper {
 
 div#furtherFilters {
 	padding: 7px 7px 7px 7px;
-	background: #1b6e22;
+	background: #2F5A33;
 	border-radius: 5px;
 	font-size: large;
 	line-height: 30px;
@@ -140,7 +140,7 @@ div#furtherFilters span.clickable {
 }
 
 div#furtherFilters span.clickable:hover {
-	background: #03520A;
+	background: #449E4C;
 }
 
 div#furtherFilters a.compoundFilterName {
@@ -207,8 +207,7 @@ div.cells div.clickable {
 	margin-right: 7px;
 	vertical-align: middle;
 	width: 250px;
-	-moz-border-radius: 15px;
-	border-radius: 15px;
+	border-radius: 5px;
 	background: #f9f9f9;
 	border: 1px #bbb solid;
 	display: inline-block;
@@ -382,7 +381,6 @@ span.fieldName {
 
 ul.compoundEntityInfo {
 	border: 1px black solid;
-	-moz-border-radius: 8px;
 	border-radius: 9px;
 	padding: 10px;
 	margin: 7px 3px 12px 3px;
@@ -466,7 +464,7 @@ div#refreshData {
 }
 */
 
-@media screen and (max-width: 1270px) {
+@media screen and (min-width: 976px) {
 	/* Four columns */
 	div.cells div.clickable {
 		width: 22%;
@@ -517,7 +515,6 @@ div#refreshData {
 		border-top: 1px #555 solid;
 		margin: 0;
 		width: auto;
-		-moz-border-radius: 0;
 		border-radius: 0;
 	}
 
