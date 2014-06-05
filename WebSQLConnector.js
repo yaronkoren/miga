@@ -108,7 +108,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 						continue;
 					}
 					var columnType = columnDescription['fieldType'];
-					if ( columnType != 'Image URL' && columnType != 'Video URL' && columnType != 'Audio URL' && columnType != 'Document path' && columnType != 'Text' && ( cellValue == null || cellValue == '' ) ) continue;
+					if ( columnType != 'Image URL' && columnType != 'Video URL' && columnType != 'Audio URL' /*&& columnType != 'Document path'*/ && columnType != 'Text' && ( cellValue == null || cellValue == '' ) ) continue;
 					if ( columnType == 'Name' ) {
 						hasNameField = true;
 

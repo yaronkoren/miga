@@ -1180,11 +1180,14 @@ function displayItemValues( itemValues ) {
 				// HTML5 audio
 				objectString = '<div style="max-width: 90%"><audio controls><source src="' + objectString + '" /><p>This browser does not support HTML5 audio.</p></audio></div>';
 			}
+		// Viewer.JS stuff temporarily commented out.
+		/*
 		} else if ( propType == 'Document path' ) {
 			if ( objectString != '' ) {
 				// Use Viewer.JS - for either PDF or ODF files
 				objectString = '<p><iframe src="libs/Viewer.js/#../../apps/' + gAppSettings['Name'] + '/' + objectString + '" width="520" height="350" allowfullscreen webkitallowfullscreen></iframe></p>';
 			}
+		*/
 		} else if ( DataLoader.isDateType(propType) ) {
 			objectString = Date.dbStringToDisplayString( objectString );
 		}
