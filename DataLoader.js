@@ -55,6 +55,7 @@ function analyzeDataForCategory(categoryName, itemsArray) {
 			fieldAttributes['isFilter'] = true;
 			continue;
 		}
+		gDataSchema[categoryName]['fields'][fieldName]['numItems'] = numItems;
 
 		var totalNumValues = 0;
 		var allFieldValues = {};

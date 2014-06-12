@@ -1342,11 +1342,24 @@ function displayFilterValues( mdvState, filterValues ) {
 
 	}
 
+	// We may show a listing at the end of all the values that were too
+	// infrequent to be listed here, and their total instances.
+	var numOtherValues = 0;
+	var numOtherItems = 0;
 	for (var i = 0; i < len; i++) {
 		var newDBState = mdvState.clone();
 		newDBState.displayFilter = null;
 		var curFilter = filterValues[i];
-		if ( curFilter['numValues'] == 0 ) continue;
+		if ( curFilter['numValues'] == 0 ) {
+			continue;
+		}
+		// If a value represents less than .05% of the total items,
+		// don't show it.
+		if ( gDataSchema[mdvState.categoryName]['fields'][mdvState.displayFilter].hasOwnProperty('numItems') && curFilter['numValues'] < ( gDataSchema[mdvState.categoryName]['fields'][mdvState.displayFilter]['numItems'] * .0005 ) ) {
+			numOtherValues++;
+			numOtherItems += curFilter['numValues'];
+			continue;
+		}
 		var filterName = curFilter['filterName'];
 		if ( filterName == null ) {
 			filterNameDisplay = "<em>No value</em>";
@@ -1376,6 +1389,9 @@ function displayFilterValues( mdvState, filterValues ) {
 		msg += listElementHTML( newDBState, rowDisplay, true );
 	}
 	msg += "</div>\n";
+	if ( numOtherValues > 0 ) {
+		msg += "<p>There were <strong>" + numOtherValues + "</strong> other values for this field that are not listed here, with <strong>" + numOtherItems + "</strong> instances altogether.<p>";
+	}
 	addToMainText( msg );
 	makeRowsClickable();
 }
@@ -1561,10 +1577,10 @@ function displayPage( mdvState ) {
 	// Set class for this page, to allow custom CSS.
 	jQuery('body').attr( 'class', "page-" + mdvState.pageName );
 
+	blankFiltersInfo();
 	// Special handling for start page
 	if ( mdvState.pageName == '_start' ) {
 		jQuery('#header').hide();
-		blankFiltersInfo();
 		displayMainText('');
 		pageFile = gAppSettings['Start page'];
 	} else {
