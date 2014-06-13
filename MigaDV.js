@@ -1205,43 +1205,56 @@ function displayItemValues( itemValues ) {
 }
 
 function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemName ) {
-	var curSubjectID = null, prevSubjectID = null;
-	var curCategory = null, prevCategory = null;
-	var msg = "";
+	// Go through the set of entity values multiple times - first to
+	// get the set of category/property pairs that we'll be displaying,
+	// and then, for each such pair, to find the set of matching items
+	// and display them as a list.
+	// There's no doubt a more efficient way to do this, but this was the
+	// easiest approach I could think of.
+	var categoryPropertyPairs = {};
 	var len = allEntityValues.length, i;
 	for (i = 0; i < len; i++) {
-		curSubjectID = allEntityValues[i]['SubjectID'];
-		curSubjectName = dataPerEntity[curSubjectID]['Name'];
-		curCategory = dataPerEntity[curSubjectID]['Category'];
-		curProperty = dataPerEntity[curSubjectID]['Property'];
-		if ( curSubjectID != prevSubjectID ) {
-			if ( curCategory == gCurCategory ) {
-				if ( curCategory != prevCategory ) {
-					msg += "<h3>" + curCategory + " that have " + itemName + " as " + curProperty + ":</h3>\n";
-				}
-				if ( curSubjectName != '' ) {
-					msg += "<li>" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
-				}
-			} else {
-				if ( prevSubjectID != null ) {
-					msg += "</ul>\n";
-				}
-				if ( curCategory != prevCategory ) {
-					msg += "<h3>" + curCategory + "</h3>\n";
-				}
-				msg += "<ul class=\"compoundEntityInfo\">\n";
-				if ( curSubjectName != '' ) {
-					msg += "<li>" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
-				}
-			}
+		var curSubjectID = allEntityValues[i]['SubjectID'];
+		var curCategory = dataPerEntity[curSubjectID]['Category'];
+		var curProperty = dataPerEntity[curSubjectID]['Property'];
+		if ( ! categoryPropertyPairs.hasOwnProperty( curCategory ) ) {
+			categoryPropertyPairs[curCategory] = {};
 		}
-		prevSubjectID = curSubjectID;
-		prevCategory = curCategory;
-		if ( curCategory != gCurCategory ) {
-			msg += '<span class="fieldName">' + allEntityValues[i]['Property'] + ":</span> " + allEntityValues[i]['Object'] + "<br />\n";
+		if ( ! categoryPropertyPairs[curCategory].hasOwnProperty( curProperty ) ) {
+			categoryPropertyPairs[curCategory][curProperty] = true;
 		}
 	}
-	msg += "</ul>\n";
+
+	var msg = "";
+	for ( var selectedCategory in categoryPropertyPairs ) {
+		for ( var selectedProperty in categoryPropertyPairs[selectedCategory] ) {
+			msg += "<h3>" + selectedCategory + " that have " + itemName + " as " + selectedProperty + ":</h3>\n";
+			msg += "<ul>\n";
+			var curSubjectID = null, prevSubjectID = null;
+			for (i = 0; i < len; i++) {
+				curSubjectID = allEntityValues[i]['SubjectID'];
+				var curSubjectName = dataPerEntity[curSubjectID]['Name'];
+				curCategory = dataPerEntity[curSubjectID]['Category'];
+				curProperty = dataPerEntity[curSubjectID]['Property'];
+				if ( curCategory != selectedCategory || curProperty != selectedProperty ) {
+					continue;
+				}
+				if ( curSubjectID != prevSubjectID ) {
+					if ( selectedCategory != gCurCategory ) {
+						msg += "</ul>\n";
+						msg += "<ul class=\"compoundEntityInfo\">\n";
+					}
+					msg += "<li>" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
+				}
+				if ( selectedCategory != gCurCategory ) {
+					msg += '<span class="fieldName">' + allEntityValues[i]['Property'] + ":</span> " + allEntityValues[i]['Object'] + "<br />\n";
+				}
+				prevSubjectID = curSubjectID;
+			}
+			msg += "</ul>\n";
+		}
+	}
+
 	addToMainText( msg );
 }
 
