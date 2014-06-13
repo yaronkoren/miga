@@ -1216,12 +1216,15 @@ function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemNam
 	for (i = 0; i < len; i++) {
 		var curSubjectID = allEntityValues[i]['SubjectID'];
 		var curCategory = dataPerEntity[curSubjectID]['Category'];
-		var curProperty = dataPerEntity[curSubjectID]['Property'];
 		if ( ! categoryPropertyPairs.hasOwnProperty( curCategory ) ) {
 			categoryPropertyPairs[curCategory] = {};
 		}
-		if ( ! categoryPropertyPairs[curCategory].hasOwnProperty( curProperty ) ) {
-			categoryPropertyPairs[curCategory][curProperty] = true;
+		var curProperties = dataPerEntity[curSubjectID]['Properties'];
+		for ( var j = 0; j < curProperties.length; j++ ) {
+			var curProperty = curProperties[j];
+			if ( ! categoryPropertyPairs[curCategory].hasOwnProperty( curProperty ) ) {
+				categoryPropertyPairs[curCategory][curProperty] = true;
+			}
 		}
 	}
 
@@ -1235,10 +1238,20 @@ function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemNam
 				curSubjectID = allEntityValues[i]['SubjectID'];
 				var curSubjectName = dataPerEntity[curSubjectID]['Name'];
 				curCategory = dataPerEntity[curSubjectID]['Category'];
-				curProperty = dataPerEntity[curSubjectID]['Property'];
-				if ( curCategory != selectedCategory || curProperty != selectedProperty ) {
+				if ( curCategory != selectedCategory ) {
 					continue;
 				}
+				var curProperties = dataPerEntity[curSubjectID]['Properties'];
+				var foundMatchingProperty = false;
+				for ( var j = 0; j < curProperties.length; j++ ) {
+					if ( curProperties[j] == selectedProperty ) {
+						foundMatchingProperty = true;
+					}
+				}
+				if ( !foundMatchingProperty ) {
+					continue;
+				}
+
 				if ( curSubjectID != prevSubjectID ) {
 					if ( selectedCategory != gCurCategory ) {
 						msg += "</ul>\n";
@@ -1266,6 +1279,15 @@ function displayCompoundItemValues( entityValues, itemName ) {
 	var dataPerEntity = {};
 	for (i = 0; i < len; i++) {
 		var entityID = entityValues[i]['SubjectID']
+		// We may or may not have gotten this entity before. If we have,
+		// it means there's more than one property connecting it to
+		// the current item - so just get the new property and add it
+		// to the list.
+		if ( dataPerEntity.hasOwnProperty(entityID) ) {
+			dataPerEntity[entityID]['Properties'].push(entityValues[i]['Property']);
+			continue;
+		}
+
 		if ( compoundEntityIDs == null ) {
 			compoundEntityIDs = entityID;
 		} else {
@@ -1274,7 +1296,10 @@ function displayCompoundItemValues( entityValues, itemName ) {
 		dataPerEntity[entityID] = {};
 		dataPerEntity[entityID]['Category'] = entityValues[i]['Category'];
 		dataPerEntity[entityID]['Name'] = entityValues[i]['Name']
-		dataPerEntity[entityID]['Property'] = entityValues[i]['Property'];
+		// This is an array, because there might be more than one
+		// property pointing between the two entities.
+		dataPerEntity[entityID]['Properties'] = [];
+		dataPerEntity[entityID]['Properties'].push(entityValues[i]['Property']);
 	}
 	if ( compoundEntityIDs != null ) {
 		gDBConn.displayCompoundEntitiesForItem( compoundEntityIDs, dataPerEntity, itemName );
