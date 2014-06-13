@@ -479,7 +479,7 @@ WebSQLConnector.prototype.displayDBLoadingProgress = function( textEntriesLoaded
 	var percentage = Math.ceil(100 * currentProgress / totalProgressNeeded);
 	var msg = "<p>Loading data into local database... " + percentage + "% complete.</p>\n";
 	msg += '<progress value="' + percentage + '" max="100" />';
-	msg += "<p>(Once the data is loaded, it will be available whenever you go to this URL, even if you shut off your computer or device.)</p>";
+	msg += "<p>(Once the data is loaded, it will be available whenever you go to this URL, even if you go offline or after you shut off your computer or device.)</p>";
 	displayMainText( msg );
 }
 
