@@ -379,6 +379,13 @@ span.fieldName {
 	font-weight: bold;
 }
 
+div.entitiesList {
+	border: 1px black solid;
+	border-radius: 9px;
+	padding: 10px;
+	background: #FAFFDD;
+}
+
 ul.compoundEntityInfo {
 	border: 1px black solid;
 	border-radius: 9px;

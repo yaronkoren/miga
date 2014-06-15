@@ -1205,25 +1205,46 @@ function displayItemValues( itemValues ) {
 }
 
 function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemName ) {
-	// Go through the set of entity values multiple times - first to
-	// get the set of category/property pairs that we'll be displaying,
-	// and then, for each such pair, to find the set of matching items
-	// and display them as a list.
+	// Go through the set of entity values multiple times - first, a
+	// bunch of times to get the set of category/property pairs that we'll
+	// be displaying, and then, for each such pair, to find the set of
+	// matching items and display them as a list.
 	// There's no doubt a more efficient way to do this, but this was the
 	// easiest approach I could think of.
-	var categoryPropertyPairs = {};
+
+	// We go through the categories and properties in gDataSchema so that
+	// they'll appear on the item page in the same order that they appear
+	// in the schema.
 	var len = allEntityValues.length, i;
-	for (i = 0; i < len; i++) {
-		var curSubjectID = allEntityValues[i]['SubjectID'];
-		var curCategory = dataPerEntity[curSubjectID]['Category'];
-		if ( ! categoryPropertyPairs.hasOwnProperty( curCategory ) ) {
-			categoryPropertyPairs[curCategory] = {};
-		}
-		var curProperties = dataPerEntity[curSubjectID]['Properties'];
-		for ( var j = 0; j < curProperties.length; j++ ) {
-			var curProperty = curProperties[j];
-			if ( ! categoryPropertyPairs[curCategory].hasOwnProperty( curProperty ) ) {
-				categoryPropertyPairs[curCategory][curProperty] = true;
+	var categoryPropertyPairs = {};
+	for ( categoryName in gDataSchema ) {
+		for ( fieldName in gDataSchema[categoryName]['fields'] ) {
+			var thisPairAlreadyFound = false;
+			for (i = 0; i < len; i++) {
+				var curSubjectID = allEntityValues[i]['SubjectID'];
+				var curCategory = dataPerEntity[curSubjectID]['Category'];
+				if ( curCategory != categoryName ) {
+					continue;
+				}
+				var curProperties = dataPerEntity[curSubjectID]['Properties'];
+				for ( var j = 0; j < curProperties.length; j++ ) {
+					var curProperty = curProperties[j];
+					if ( curProperty != fieldName ) {
+						continue;
+					}
+					// We're still here - we have a match!
+					if ( ! categoryPropertyPairs.hasOwnProperty( curCategory ) ) {
+						categoryPropertyPairs[curCategory] = {};
+					}
+					categoryPropertyPairs[curCategory][curProperty] = true;
+					// We could do this with a
+					// "break <label>" call
+					// instead - oh well.
+					thisPairAlreadyFound = true;
+				}
+				if ( thisPairAlreadyFound ) {
+					break;
+				}
 			}
 		}
 	}
@@ -1232,8 +1253,18 @@ function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemNam
 	for ( var selectedCategory in categoryPropertyPairs ) {
 		for ( var selectedProperty in categoryPropertyPairs[selectedCategory] ) {
 			msg += "<h3>" + selectedCategory + " that have " + itemName + " as " + selectedProperty + ":</h3>\n";
-			msg += "<ul>\n";
+			// We have a separate variable just for the HTML of
+			// this list, so we can exit out, without displaying
+			// any of it, if the list gets too long.
+			var curListMsg = '';
+			if ( gCurCategory == selectedCategory ) {
+				curListMsg += "<div class=\"entitiesList\">";
+			} else {
+				curListMsg += "<ul>\n";
+			}
 			var curSubjectID = null, prevSubjectID = null;
+			var sizeOfList = 0;
+			var maxListSize = 500;
 			for (i = 0; i < len; i++) {
 				curSubjectID = allEntityValues[i]['SubjectID'];
 				var curSubjectName = dataPerEntity[curSubjectID]['Name'];
@@ -1253,18 +1284,42 @@ function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemNam
 				}
 
 				if ( curSubjectID != prevSubjectID ) {
-					if ( selectedCategory != gCurCategory ) {
-						msg += "</ul>\n";
-						msg += "<ul class=\"compoundEntityInfo\">\n";
+					sizeOfList++;
+					if ( sizeOfList > maxListSize ) {
+						// Too big! Exit
+						break;
 					}
-					msg += "<li>" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
+					if ( selectedCategory != gCurCategory ) {
+						curListMsg += "</ul>\n";
+						curListMsg += "<ul class=\"compoundEntityInfo\">\n";
+						curListMsg += "<li>" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
+					} else {
+						if ( sizeOfList > 1 ) {
+							curListMsg += ", ";
+						}
+						curListMsg += linkToItemHTML( curSubjectID, curSubjectName );
+					}
 				}
 				if ( selectedCategory != gCurCategory ) {
-					msg += '<span class="fieldName">' + allEntityValues[i]['Property'] + ":</span> " + allEntityValues[i]['Object'] + "<br />\n";
+					curListMsg += '<span class="fieldName">' + allEntityValues[i]['Property'] + ":</span> " + allEntityValues[i]['Object'] + "<br />\n";
 				}
 				prevSubjectID = curSubjectID;
 			}
-			msg += "</ul>\n";
+			if ( sizeOfList <= maxListSize ) {
+				if ( gCurCategory == selectedCategory ) {
+					curListMsg += "</div>\n";
+				} else {
+					curListMsg += "</ul>\n";
+				}
+			} else {
+				// Show "error" message, plus a link to the
+				// corresponding filter page for this set.
+				var selectedFilters = [];
+				selectedFilters[selectedProperty] = itemName;
+				var newMDVState = new MDVState( selectedCategory, selectedFilters);
+				curListMsg = "<p><em>Too many items to list; <a href=\"" + newMDVState.getURLHash() + "\">see here</a> for the complete list.</em></p>";
+			}
+			msg += curListMsg;
 		}
 	}
 
