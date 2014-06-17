@@ -508,11 +508,11 @@ function displayAdditionalFilters( mdvState ) {
 	}
 }
 
-function displayItem( itemID, itemName ) {
+function displayItem( mdvState, itemID, itemName ) {
 	jQuery('#furtherFiltersWrapper').html("");
 	displayMainText('<ul id="itemValues"></ul>');
 	// This displayItem() function will itself call displayItemValues().
-	gDBConn.displayItem( itemID, itemName );
+	gDBConn.displayItem( mdvState, itemID, itemName );
 }
 
 function listElementHTML( mdvState, internalHTML, isDiv ) {
@@ -1028,7 +1028,7 @@ function displayItems( mdvState, allItemValues ) {
 	// If there's just one item, display it right away.
 	if (numItems == 1) {
 		itemValues = allItemValues[0];
-		displayItem( itemValues['SubjectID'], itemValues['SubjectName'] );
+		displayItem( mdvState, itemValues['SubjectID'], itemValues['SubjectName'] );
 		return;
 	}
 
@@ -1133,14 +1133,22 @@ function displayItems( mdvState, allItemValues ) {
 	makeRowsClickable();
 }
 
-function displayItemTitle( itemName ) {
-	jQuery('#pageTitle').html("<h1>" + itemName + "</h1>");
+function displayItemHeader( mdvState ) {
+	jQuery('#pageTitle').html("<h1>" + mdvState.itemName + "</h1>");
+	displayCategoryAndSelectedFiltersList( mdvState );
 }
 
 function linkToItemHTML( itemID, itemName ) {
 	var mdvState = new MDVState();
 	mdvState.itemID = itemID;
 	return '<a href="' + mdvState.getURLHash() + '">' + HTMLEscapeString( itemName ) + '</a>';
+}
+
+function addQueryLinkToString( value, categoryName, propName ) {
+	var selectedFilters = [];
+	selectedFilters[propName] = value;
+	var mdvState = new MDVState(categoryName, selectedFilters);
+	return '<a class="queryLink" href="' + mdvState.getURLHash() + '">' + value + '</a>';
 }
 
 function displayItemValues( itemValues ) {
@@ -1154,6 +1162,14 @@ function displayItemValues( itemValues ) {
 		var objectString = itemValues[i]['Object'];
 		if ( itemValues[i].hasOwnProperty('ObjectID') && itemValues[i]['ObjectID'] != null ) {
 			objectString = linkToItemHTML( itemValues[i]['ObjectID'], objectString );
+		} else if ( propType == 'Entity' ) {
+			// The type is 'Entity', but there's no page for this
+			// specific entity, and it's considered a filter field,
+			// add a link to query on this value.
+			var isFilter = gDataSchema[gCurCategory]['fields'][propName]['isFilter'];
+			if ( objectString != '' && isFilter ) {
+				objectString = addQueryLinkToString( objectString, gCurCategory, propName );
+			}
 		} else if ( propType == 'ID' ) {
 			// Ignore this field.
 			continue;
@@ -1162,6 +1178,10 @@ function displayItemValues( itemValues ) {
 			// for all types.
 			objectString = objectString.replace("\n", '<br />');
 			objectString = HTMLEscapeString( objectString );
+			var isFilter = gDataSchema[gCurCategory]['fields'][propName]['isFilter'];
+			if ( objectString != '' && isFilter ) {
+				objectString = addQueryLinkToString( objectString, gCurCategory, propName );
+			}
 		} else if ( propType == 'URL' ) {
 			if ( objectString != '' ) {
 				objectString = '<a href="' + objectString + '">' + objectString + '</a>';
@@ -1446,9 +1466,9 @@ function displayFilterValues( mdvState, filterValues ) {
 		if ( curFilter['numValues'] == 0 ) {
 			continue;
 		}
-		// If a value represents less than .05% of the total items,
-		// don't show it.
-		if ( gDataSchema[mdvState.categoryName]['fields'][mdvState.displayFilter].hasOwnProperty('numItems') && curFilter['numValues'] < ( gDataSchema[mdvState.categoryName]['fields'][mdvState.displayFilter]['numItems'] * .0005 ) ) {
+		// If a value has less than .1% of the items of the most
+		// "popular" value, don't show it.
+		if ( curFilter['numValues'] < ( filterValues[0]['numItems'] * .001 ) ) {
 			numOtherValues++;
 			numOtherItems += curFilter['numValues'];
 			continue;
@@ -1742,7 +1762,7 @@ function setDisplayFromURL() {
 
 	if ( mdvState.itemID != null ) {
 		window.scrollTo(0,0);
-		displayItem( mdvState.itemID, null );
+		displayItem( mdvState, mdvState.itemID, null );
 	} else if ( mdvState.pageName != null ) {
 		if ( mdvState.pageName != '_start' || gAppSettings.hasOwnProperty('Start page') ) {
 			window.scrollTo(0,0);

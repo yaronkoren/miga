@@ -361,6 +361,18 @@ div.numValuesBar {
 
 /* List of values for a single item */
 
+a.queryLink {
+	color: black;
+	padding-right: 12px;
+	background-image: url('images/miga-query-light.png');
+	background-repeat: no-repeat;
+	background-position: right top;
+}
+
+a.queryLink:hover {
+	background-image: url('images/miga-query.png');
+}
+
 ul#itemValues {
 	margin: 0;
 	padding: 0;

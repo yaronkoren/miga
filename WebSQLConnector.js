@@ -323,7 +323,7 @@ WebSQLConnector.prototype.loadDataIfNecessary = function( allData ) {
 	});
 }
 
-WebSQLConnector.prototype.displayItem = function( itemID, itemName ) {
+WebSQLConnector.prototype.displayItem = function( mdvState, itemID, itemName ) {
 	var itemName = null;
 	var dbConn = this;
 	this.db.transaction(function (tx) {
@@ -340,18 +340,19 @@ WebSQLConnector.prototype.displayItem = function( itemID, itemName ) {
 				function (tx, results) {
 					itemName = results.rows.item(0)['Name'];
 					gCurCategory = results.rows.item(0)['Category'];
-					var mdvState = new MDVState();
+					//var mdvState = new MDVState();
 					mdvState.categoryName = gCurCategory;
 					mdvState.itemName = itemName;
 					displayTitle( mdvState );
 					displayCategoryAndSelectedFiltersList( mdvState );
 
-					displayItemTitle( itemName );
+					displayItemHeader( mdvState );
 					displayTopSearchInput( mdvState );
 				}
 			);
 		} else {
-			displayItemTitle( itemName );
+			mdvState.itemName = itemName;
+			displayItemHeader( mdvState );
 		}
 
 		var selectSQL = 'SELECT Property, ObjectID, ObjectName AS Object' +
