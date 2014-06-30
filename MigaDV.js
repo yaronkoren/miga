@@ -13,7 +13,7 @@
 
 // Global variables - sorry if this offends anyone. :)
 var gDBRandomString = null;
-var gDataTimestamp = null;
+//var gDataTimestamp = null;
 var gAppSettings = null;
 var gDataSchema = null;
 var gCurCategory = null;
@@ -111,6 +111,18 @@ function categoryHasStartAndEndTimeFields( categoryName ) {
 
 // This is where the core functionality starts.
 
+function saveDataToLocalStorage() {
+        // Save all the settings data to LocalStorage!
+        var allAppInfo = {};
+        allAppInfo['dbRandomString'] = gDBRandomString;
+        allAppInfo['dataSchema'] = gDataSchema;
+        allAppInfo['appSettings'] = gAppSettings;
+        allAppInfo['pagesInfo'] = gPagesInfo;
+        allAppInfo['dataTimestamp'] = gDataTimestamp;
+
+        localStorage.setItem( 'Miga ' + getURLPath(), JSON.stringify( allAppInfo ) );
+}
+
 function setAllFromAppSettings() {
 	try {
 		gDBConn = new WebSQLConnector( gAppSettings['Name'] );
@@ -199,36 +211,41 @@ function setAllFromAppSettings() {
 }
 
 function getSettingsAndLoadData() {
-	// If we need the settings, retrieve them from LocalSettings, if
+	// If we need the settings, retrieve them from LocalStorage, if
 	// they're there.
 	if ( gDataSchema == null ) {
 		var allAppInfoJSON = localStorage.getItem('Miga ' + getURLPath() );
 		if ( allAppInfoJSON != null ) {
 			var allAppInfo = JSON.parse( allAppInfoJSON );
 			gDBRandomString = allAppInfo['dbRandomString'];
-			gDataTimestamp = allAppInfo['dataTimestamp'];
 			gDataSchema = allAppInfo['dataSchema'];
 			gAppSettings = allAppInfo['appSettings'];
 			gPagesInfo = allAppInfo['pagesInfo'];
-			setAllFromAppSettings();
+
+			// gDataTimestamp, unlike the other global variables,
+			// does not come from LocalStorage but rather from
+			// the data JS file. timestampFromLocalStorage is the
+			// value that comes from Local Storage.
+			var timestampFromLocalStorage = allAppInfo['dataTimestamp'];
+			if ( typeof gDataTimestamp !== 'undefined' && timestampFromLocalStorage < gDataTimestamp ) {
+				refreshData();
+			} else {
+				setAllFromAppSettings();
+			}
 		}
 	}
 
 	if ( gAppSettings == null ) {
-		jQuery.get("SettingsReader.php?url=" + getURLPath(), function(json) {
-			gAppSettings = jQuery.parseJSON(json);
+		// If there was no data in LocalStorage, get the data from
+		// the data JS file.
+		DataLoader.getAppSettingsAndSchema();
+		if ( gAppSettings != null ) {
 			setAllFromAppSettings();
-		}).done( function(data) {
-			if ( gDBConn == null ) {
-				return;
-			}
-			androidOnlyAlert("Calling DataLoader.getAndLoadDataIfNecessary()");
-			DataLoader.getAndLoadDataIfNecessary( gAppSettings['Directory'], gAppSettings['Schema file'] );
-			DataLoader.getPagesDataIfNecessary( gAppSettings['Directory'], gAppSettings['Pages file'] );
-		});
+			gDBConn.loadDataIfNecessary();
+			saveDataToLocalStorage();
+		}
 	} else {
-		DataLoader.getAndLoadDataIfNecessary( gAppSettings['Directory'], gAppSettings['Schema file'] );
-		DataLoader.getPagesDataIfNecessary( gAppSettings['Directory'], gAppSettings['Pages file'] );
+		gDBConn.loadDataIfNecessary();
 	}
 }
 
@@ -236,30 +253,26 @@ function getSettingsAndLoadData() {
  * Sets both the header and the document title of the page.
  */
 function displayTitle( mdvState ) {
-	if ( gAppSettings == null ) {
-		// Is this check necessary?
-		getSettingsAndLoadData();
-	} else {
-		var titleText = gAppSettings['Name'];
-		jQuery('#title').html('<a href="#">' + titleText + '</a>');
+	var titleText = gAppSettings['Name'];
+	jQuery('#title').html('<a href="#">' + titleText + '</a>');
 
-		var documentTitleText = gAppSettings['Name'];
-		if ( mdvState == null ) {
-			// Do nothing
-		} else if ( mdvState.useSearchForm ) {
-			documentTitleText += ": Search";
-		} else if ( mdvState.categoryName != null ) {
-			//documentTitleText += ": " + mdvState.categoryName;
-			if ( mdvState.itemName != null ) {
-				documentTitleText += ": " + mdvState.itemName;
-			}
-		} else if ( mdvState.pageName == '_start' ) {
-			// Start page - just show the site name.
-		} else if ( mdvState.pageName != null ) {
-			documentTitleText += ": " + mdvState.pageName;
+	var documentTitleText = gAppSettings['Name'];
+	if ( mdvState == null ) {
+		// Do nothing
+	} else if ( mdvState.useSearchForm ) {
+		documentTitleText += ": Search";
+	} else if ( mdvState.categoryName != null ) {
+		//documentTitleText += ": " + mdvState.categoryName;
+		if ( mdvState.itemName != null ) {
+			documentTitleText += ": " + mdvState.itemName;
 		}
-		document.title = documentTitleText;
+	} else if ( mdvState.pageName == '_start' ) {
+		// Start page - just show the site name.
+	} else if ( mdvState.pageName != null ) {
+		documentTitleText += ": " + mdvState.pageName;
 	}
+	document.title = documentTitleText;
+
 	jQuery('#searchInputWrapper').html(null);
 }
 
@@ -334,11 +347,11 @@ function displayCategorySelector() {
 		for ( pageName in gPagesInfo ) {
 			var mdvState = new MDVState();
 			var curPage = gPagesInfo[pageName];
-			if ( curPage.hasOwnProperty('File') ) {
+			if ( curPage[0] == 'File' ) {
 				//var fileName = curPage['File'];
 				mdvState.pageName = pageName;
-			} else if ( curPage.hasOwnProperty('Category') ) {
-				mdvState.categoryName = curPage['Category'];
+			} else if ( curPage[0] == 'Category' ) {
+				mdvState.categoryName = curPage[1];
 			}
 			msg += listElementHTML( mdvState, pageName, false );
 		}
@@ -447,7 +460,7 @@ function displayAdditionalFilters( mdvState ) {
 
 		for ( fieldName in gDataSchema[categoryName]['fields'] ) {
 			if ( gDataSchema[categoryName]['fields'][fieldName]['fieldType'] == 'Entity' ) {
-				if ( gDataSchema[categoryName]['fields'][fieldName]['connectorTable'] == mdvState.categoryName ) {
+				if ( gDataSchema[categoryName]['fields'][fieldName]['connectedCategory'] == mdvState.categoryName ) {
 					foundMatch = true;
 				}
 			}
@@ -493,7 +506,7 @@ function displayAdditionalFilters( mdvState ) {
 				}
 			} else {
 				if ( isCompoundFilter ) {
-					msg += ' <a href="' + newDBState.getURLHash() + '" class="compoundFilterName">' + filterName.substring( filterColonsLoc + 2 ) + "</a>";
+					msg += ' <span class="clickable compoundFilterName" real-href="' + newDBState.getURLHash() + '">' + filterName.substring( filterColonsLoc + 2 ) + '</span>';
 				} else {
 					msg += ' <span class="clickable" real-href="' + newDBState.getURLHash() + '">' + filterName + "</span>";
 				}
@@ -1144,10 +1157,7 @@ function linkToItemHTML( itemID, itemName ) {
 	return '<a href="' + mdvState.getURLHash() + '">' + HTMLEscapeString( itemName ) + '</a>';
 }
 
-function addQueryLinkToString( value, categoryName, propName ) {
-	var selectedFilters = [];
-	selectedFilters[propName] = value;
-	var mdvState = new MDVState(categoryName, selectedFilters);
+function addQueryLinkToString( value, mdvState ) {
 	return '<a class="queryLink" href="' + mdvState.getURLHash() + '">' + value + '</a>';
 }
 
@@ -1160,7 +1170,7 @@ function displayItemValues( itemValues ) {
 		var propName = itemValues[i]['Property'];
 		var propType = gDataSchema[gCurCategory]['fields'][propName]['fieldType'];
 		var objectString = itemValues[i]['Object'];
-		if ( itemValues[i].hasOwnProperty('ObjectID') && itemValues[i]['ObjectID'] != null ) {
+		if ( itemValues[i].hasOwnProperty('ObjectID') && itemValues[i]['ObjectID'] != null && itemValues[i]['ObjectID'] != '' ) {
 			objectString = linkToItemHTML( itemValues[i]['ObjectID'], objectString );
 		} else if ( propType == 'Entity' ) {
 			// The type is 'Entity', but there's no page for this
@@ -1168,7 +1178,10 @@ function displayItemValues( itemValues ) {
 			// add a link to query on this value.
 			var isFilter = gDataSchema[gCurCategory]['fields'][propName]['isFilter'];
 			if ( objectString != '' && isFilter ) {
-				objectString = addQueryLinkToString( objectString, gCurCategory, propName );
+				var selectedFilters = [];
+				selectedFilters[propName] = objectString;
+				var newMDVState = new MDVState(gCurCategory, selectedFilters);
+				objectString = addQueryLinkToString( objectString, newMDVState );
 			}
 		} else if ( propType == 'ID' ) {
 			// Ignore this field.
@@ -1176,11 +1189,15 @@ function displayItemValues( itemValues ) {
 		} else if ( propType == 'Text' ) {
 			// Some text-manipulation - maybe this should be done
 			// for all types.
+			var origObjectString = objectString;
 			objectString = objectString.replace("\n", '<br />');
 			objectString = HTMLEscapeString( objectString );
 			var isFilter = gDataSchema[gCurCategory]['fields'][propName]['isFilter'];
 			if ( objectString != '' && isFilter ) {
-				objectString = addQueryLinkToString( objectString, gCurCategory, propName );
+				var selectedFilters = [];
+				selectedFilters[propName] = origObjectString;
+				var newMDVState = new MDVState( gCurCategory, selectedFilters );
+				objectString = addQueryLinkToString( objectString, newMDVState );
 			}
 		} else if ( propType == 'URL' ) {
 			if ( objectString != '' ) {
@@ -1285,6 +1302,13 @@ function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemNam
 			var curSubjectID = null, prevSubjectID = null;
 			var sizeOfList = 0;
 			var maxListSize = 500;
+			// For nameless categories, we're assuming that each
+			// field modifies the set of fields before it - the
+			// same assumption that holds for the set of "further
+			// flters" displayed at the top.
+			// This is probably not a correct assumption in all
+			// cases. @TODO - more work needs to be done here.
+			var cumulativeQueryLinkFilters = [];
 			for (i = 0; i < len; i++) {
 				curSubjectID = allEntityValues[i]['SubjectID'];
 				var curSubjectName = dataPerEntity[curSubjectID]['Name'];
@@ -1310,9 +1334,11 @@ function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemNam
 						break;
 					}
 					if ( selectedCategory != gCurCategory ) {
+						// Reset.
+						cumulativeQueryLinkFilters = [];
 						curListMsg += "</ul>\n";
 						curListMsg += "<ul class=\"compoundEntityInfo\">\n";
-						curListMsg += "<li>" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
+						curListMsg += "<li class=\"entityName\">" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
 					} else {
 						if ( sizeOfList > 1 ) {
 							curListMsg += ", ";
@@ -1321,7 +1347,15 @@ function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemNam
 					}
 				}
 				if ( selectedCategory != gCurCategory ) {
-					curListMsg += '<span class="fieldName">' + allEntityValues[i]['Property'] + ":</span> " + allEntityValues[i]['Object'] + "<br />\n";
+					var propName = allEntityValues[i]['Property'];
+					var objectString = allEntityValues[i]['Object'];
+					var isFilter = gDataSchema[selectedCategory]['fields'][propName]['isFilter'];
+					if ( objectString != '' && isFilter ) {
+						cumulativeQueryLinkFilters[selectedCategory + '::' + propName] = objectString;
+						var newMDVState = new MDVState( gCurCategory, cumulativeQueryLinkFilters );
+						objectString = addQueryLinkToString( objectString, newMDVState );
+					}
+					curListMsg += '<span class="fieldName">' + propName + ":</span> " + objectString + "<br />\n";
 				}
 				prevSubjectID = curSubjectID;
 			}
@@ -1695,19 +1729,16 @@ function displayPage( mdvState ) {
 	if ( mdvState.pageName == '_start' ) {
 		jQuery('#header').hide();
 		displayMainText('');
-		pageFile = gAppSettings['Start page'];
+		pageContents = gAppSettings['Start page'];
 	} else {
 		displayMainText( '<h1>' + mdvState.pageName + '</h1>' );
-		pageFile = gPagesInfo[mdvState.pageName]['File'];
+		pageContents = gPagesInfo[mdvState.pageName][1];
 	}
 	displayTitle( mdvState );
 
 	jQuery('#topSearchInput').html('');
 
-	var appDirectory = gAppSettings['Directory'];
-	jQuery.get("apps/" + appDirectory + "/" + pageFile, function(text) {
-		addToMainText(text);
-	});
+	addToMainText( pageContents );
 }
 
 function makeRowsClickable() {
@@ -1721,8 +1752,9 @@ function refreshData() {
 	localStorage.removeItem('Miga ' + getURLPath());
 	gAppSettings = null;
 	gDataSchema = null;
+	gDBRandomString = null;
 	// Is there a way to do this without a reload?
-	window.location.reload();
+	//window.location.reload();
 }
 
 function setDisplayFromURL() {
@@ -1745,19 +1777,13 @@ function setDisplayFromURL() {
 
 	// Show the custom header and footer, if either exist.
 	if ( gAppSettings.hasOwnProperty('Header file') ) {
-		var appDirectory = gAppSettings['Directory'];
-		var headerFile = gAppSettings['Header file'];
-		jQuery.get("apps/" + appDirectory + "/" + headerFile, function(text) {
-			jQuery('#header').html( text );
-		});
+		var headerFileContents = gAppSettings['Header file'];
+		jQuery('#header').html( headerFileContents );
 	}
 
 	if ( gAppSettings.hasOwnProperty('Footer file') ) {
-		var appDirectory = gAppSettings['Directory'];
-		var footerFile = gAppSettings['Footer file'];
-		jQuery.get("apps/" + appDirectory + "/" + footerFile, function(text) {
-			jQuery('#footer').html( text );
-		});
+		var footerFileContents = gAppSettings['Footer file'];
+		jQuery('#footer').html( footerFileContents );
 	}
 
 	if ( mdvState.itemID != null ) {
@@ -1786,27 +1812,11 @@ function setDisplayFromURL() {
 		displayFilterValuesScreen( mdvState );
 	}
 
-	// If we don't have the original timestamp, try getting it again.
-	if ( gDataTimestamp == null ) {
-		var allAppInfoJSON = localStorage.getItem('Miga ' + getURLPath() );
-		if ( allAppInfoJSON != null ) {
-			var allAppInfo = JSON.parse( allAppInfoJSON );
-			gDataTimestamp = allAppInfo['dataTimestamp'];
-		}
-	}
-
 	jQuery('#poweredBy').html('<a href="http://migadv.com"><img src="images/Powered-by-Miga.png" alt="Powered by Miga" /></a>');
 
-	var refreshDataHTML = '<a href="' + window.location + '">Refresh data.</a>';
-	if ( gDataTimestamp != null ) {
-		var curDate = new Date();
-		refreshDataHTML = 'Data was last updated ' + getTimeDifferenceString( gDataTimestamp, curDate.getTime() ) + ' ago. ' + refreshDataHTML;
-	}
-	jQuery('#refreshData').html(refreshDataHTML);
-
-	jQuery("#refreshData a").click( function() {
-		refreshData();
-	});
+	var curDate = new Date();
+	var lastUpdatedHTML = 'Data was last updated ' + getTimeDifferenceString( gDataTimestamp, curDate.getTime() ) + ' ago.';
+	jQuery('#lastUpdated').html(lastUpdatedHTML);
 }
 
 // Poll for URL changes - this is apparently the only way to get URL
