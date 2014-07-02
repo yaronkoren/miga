@@ -1,5 +1,5 @@
 CACHE MANIFEST
-# Miga 1.2 - 2014-06-17
+# Miga 2.0-alpha - 2014-7-2
 CACHE:
 # JavaScript files
 ../DataLoader.js
@@ -30,6 +30,8 @@ CACHE:
 # images
 ../images/Ajax-loader.gif
 ../images/miga-search.png
+../images/miga-query.png
+../images/miga-query-light.png
 ../images/Powered-by-Miga.png
 NETWORK:
 # everything else
