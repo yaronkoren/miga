@@ -8,7 +8,7 @@
  *
  * @author Yaron Koren
  *
- * @version 1.2
+ * @version 2.0-alpha
  */
 
 // Global variables - sorry if this offends anyone. :)
@@ -1502,7 +1502,7 @@ function displayFilterValues( mdvState, filterValues ) {
 		}
 		// If a value has less than .1% of the items of the most
 		// "popular" value, don't show it.
-		if ( curFilter['numValues'] < ( filterValues[0]['numItems'] * .001 ) ) {
+		if ( curFilter['numValues'] < ( filterValues[0]['numValues'] * .001 ) ) {
 			numOtherValues++;
 			numOtherItems += curFilter['numValues'];
 			continue;
