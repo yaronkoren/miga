@@ -217,7 +217,7 @@ foreach ($generalSettings as $appName => $appSettings) {
 	$gEntityPropsDBTable = array();
 
 	// Used for creating the entity props table at the end.
-	$gEntities = array();
+	$gAllValues = array();
 	$gEntityProps = array();
 
 	$gEntityNum = 0;
@@ -238,7 +238,7 @@ foreach ($generalSettings as $appName => $appSettings) {
 	foreach ($schemaData as $category => $categorySchema) {
 		print "Handling category \"$category\"...\n";
 
-		$gEntities[$category] = array();
+		$gAllValues[$category] = array();
 		$gEntityProps[$category] = array();
 		$csvFilePath = "apps/" . $appSettings['Directory'] . "/" . str_replace(' ', '_', $category) . ".csv";
 
@@ -304,12 +304,14 @@ foreach ($generalSettings as $appName => $appSettings) {
 			for ($i = 0; $i < count($row); $i++) {
 				$columnName = $columnNames[$i];
 				$columnType = $categorySchema[$columnName]['fieldType'];
+				$curValue = $row[$i];
+				// Store every value in the $gAllValues array,
+				// in case something points to it.
+				$gAllValues[$category][$columnName][$curValue] = $gEntityNum;
 				if ( $columnType == "Name") {
-					$curValue = $row[$i];
 					$hasNameField = 1;
 					$gEntityNum++;
 					$gEntitiesDBTable[] = array($gEntityNum, $curValue, $category);
-					$gEntities[$category][$columnName][$curValue] = $gEntityNum;
 					break;
 				} elseif ( $columnType == "Entity") {
 					$hasEntityField = 1;
@@ -342,11 +344,10 @@ foreach ($generalSettings as $appName => $appSettings) {
 				} else {
 					$curValues = array($curValue);
 				}
-				if ( $columnType == "Name") {
+				if ( $columnType == "Name" || $columnType == "ID" ) {
+					// Do nothing.
 				} elseif ( $columnType == "Entity") {
 					$gEntityProps[$category][$columnName][$gEntityNum] = $curValues;
-				} elseif ( $columnType == "ID") {
-					$gEntities[$category][$columnName][$curValue] = $gEntityNum;
 				} elseif ( $columnType == "Number") {
 					foreach ( $curValues as $curValue ) {
 						if ( $curValue == '' ) continue;
@@ -420,8 +421,8 @@ foreach ($generalSettings as $appName => $appSettings) {
 			foreach ($entityPropsForColumn as $id => $entityValues) {
 				foreach ($entityValues as $entityValue) {
 					if ( $entityValue == '' ) continue;
-					if ( array_key_exists( $entityValue, $gEntities[$connectedCategory][$connectedColumn] ) ) {
-						$entityID = $gEntities[$connectedCategory][$connectedColumn][$entityValue];
+					if ( array_key_exists( $entityValue, $gAllValues[$connectedCategory][$connectedColumn] ) ) {
+						$entityID = $gAllValues[$connectedCategory][$connectedColumn][$entityValue];
 					} else {
 						$entityID = null;
 					}
