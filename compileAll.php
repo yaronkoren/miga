@@ -305,17 +305,17 @@ foreach ($generalSettings as $appName => $appSettings) {
 				$columnName = $columnNames[$i];
 				$columnType = $categorySchema[$columnName]['fieldType'];
 				$curValue = $row[$i];
-				// Store every value in the $gAllValues array,
-				// in case something points to it.
-				$gAllValues[$category][$columnName][$curValue] = $gEntityNum;
 				if ( $columnType == "Name") {
 					$hasNameField = 1;
 					$gEntityNum++;
 					$gEntitiesDBTable[] = array($gEntityNum, $curValue, $category);
-					break;
 				} elseif ( $columnType == "Entity") {
 					$hasEntityField = 1;
 				}
+
+				// Store every value in the $gAllValues array,
+				// in case something points to it.
+				$gAllValues[$category][$columnName][$curValue] = $gEntityNum;
 			}
 
 			if ( !$hasNameField ) {
