@@ -420,7 +420,11 @@ foreach ($generalSettings as $appName => $appSettings) {
 			foreach ($entityPropsForColumn as $id => $entityValues) {
 				foreach ($entityValues as $entityValue) {
 					if ( $entityValue == '' ) continue;
-					$entityID = $gEntities[$connectedCategory][$connectedColumn][$entityValue];
+					if ( array_key_exists( $entityValue, $gEntities[$connectedCategory][$connectedColumn] ) ) {
+						$entityID = $gEntities[$connectedCategory][$connectedColumn][$entityValue];
+					} else {
+						$entityID = null;
+					}
 					$gEntityPropsDBTable[] = array($id, $column, $entityID, $entityValue);
 				}
 			}
