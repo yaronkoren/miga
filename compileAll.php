@@ -217,7 +217,7 @@ foreach ($generalSettings as $appName => $appSettings) {
 	$gEntityPropsDBTable = array();
 
 	// Used for creating the entity props table at the end.
-	$gAllValues = array();
+	$gEntityValues = array();
 	$gEntityProps = array();
 
 	$gEntityNum = 0;
@@ -235,51 +235,75 @@ foreach ($generalSettings as $appName => $appSettings) {
 		$pagesData = null;
 	}
 
+
+	// Modify $schemaData to hold structured metadata, not just the
+	// contents of the schema .ini file.
 	foreach ($schemaData as $category => $categorySchema) {
 		print "Handling category \"$category\"...\n";
 
-		$gAllValues[$category] = array();
+		$gEntityValues[$category] = array();
 		$gEntityProps[$category] = array();
-		$csvFilePath = "apps/" . $appSettings['Directory'] . "/" . str_replace(' ', '_', $category) . ".csv";
+
+		if ( ! array_key_exists( '_file', $categorySchema ) ) {
+			$categorySchema['_file'] = "apps/" . $appSettings['Directory'] . "/" . str_replace(' ', '_', $category) . ".csv";
+		}
 
 		foreach ($categorySchema as $schemaColumn => $typeDescription) {
 			if ( $schemaColumn == '_file' ) {
-				$csvFilePath = $typeDescription;
-				//unset($schemaData[$category][$schemaColumn]);
 				continue;
 			}
 
 			// Parse the description, which will hold a type and
 			// possibly additional information.
 			$categorySchema[$schemaColumn] = array();
-				if ( strpos($typeDescription, 'List') === 0 ) {
-					$matches = array();
-					$foundMatch = preg_match( '/List \((.*)\) of (.*)/', $typeDescription, $matches);
-					if (! $foundMatch) {
-						die("Error: Bad syntax for field $schemaColumn (\"$typeDescription\")");
-					}
-					$categorySchema[$schemaColumn]['isList'] = true;
-					$categorySchema[$schemaColumn]['delimiter'] = $matches[1];
-					$typeDescription = $matches[2];
-				} else {
-					$categorySchema[$schemaColumn]['isList'] = false;
+			if ( strpos($typeDescription, 'List') === 0 ) {
+				$matches = array();
+				$foundMatch = preg_match( '/List \((.*)\) of (.*)/', $typeDescription, $matches);
+				if (! $foundMatch) {
+					die("Error: Bad syntax for field $schemaColumn (\"$typeDescription\")");
 				}
-				if ( strpos($typeDescription, 'Entity') === 0 ) {
-					$matches = array();
-					$foundMatch = preg_match( '/Entity \((.*)\/(.*)\)/', $typeDescription, $matches);
-					if (! $foundMatch) {
-						die("Error: Bad syntax for field $schemaColumn (\"$typeDescription\")");
-					}
-					$typeDescription = 'Entity';
-					$categorySchema[$schemaColumn]['connectedCategory'] = $matches[1];
-					$categorySchema[$schemaColumn]['connectedColumn'] = $matches[2];
-					$gEntityProps[$category][$schemaColumn] = array();
-				}
-				$categorySchema[$schemaColumn]['fieldType'] = $typeDescription;
-				// Set the data back in the main array.
-				$schemaData[$category] = $categorySchema;
+				$categorySchema[$schemaColumn]['isList'] = true;
+				$categorySchema[$schemaColumn]['delimiter'] = $matches[1];
+				$typeDescription = $matches[2];
+			} else {
+				$categorySchema[$schemaColumn]['isList'] = false;
 			}
+			if ( strpos($typeDescription, 'Entity') === 0 ) {
+				$matches = array();
+				$foundMatch = preg_match( '/Entity \((.*)\/(.*)\)/', $typeDescription, $matches);
+				if (! $foundMatch) {
+					die("Error: Bad syntax for field $schemaColumn (\"$typeDescription\")");
+				}
+				$typeDescription = 'Entity';
+				$connectedCategory = $matches[1];
+				$connectedColumn = $matches[2];
+				$categorySchema[$schemaColumn]['connectedCategory'] = $connectedCategory;
+				$categorySchema[$schemaColumn]['connectedColumn'] = $connectedColumn;
+				$gEntityProps[$category][$schemaColumn] = array();
+			}
+			$categorySchema[$schemaColumn]['fieldType'] = $typeDescription;
+			// Set the data back in the main array.
+			$schemaData[$category] = $categorySchema;
+		}
+	}
 
+	// Record which fields are pointed to by "Entity" fields, for use
+	// later in creating the entityProps table.
+	foreach ( $schemaData as $category => $categorySchema ) {
+		foreach ( $categorySchema as $schemaColumn => $typeDescription ) {
+			if ( $schemaColumn == '_file' ) continue;
+			if ( array_key_exists( 'connectedCategory', $typeDescription ) ) { 
+				$connectedCategory = $typeDescription['connectedCategory'];
+				$connectedColumn = $typeDescription['connectedColumn'];
+				$schemaData[$connectedCategory][$connectedColumn]['pointedTo'] = true;
+			}
+		
+		}
+	}
+
+	// Now, get the actual data from the CSV files.
+	foreach ( $schemaData as $category => $categorySchema ) {
+		$csvFilePath = $categorySchema['_file'];
 		$csvFile = fopen( $csvFilePath, 'r' );
 
 		if ( $csvFile === false ) {
@@ -291,7 +315,8 @@ foreach ($generalSettings as $appName => $appSettings) {
 		foreach ($categorySchema as $schemaColumn => $columnInfo) {
 			if ( $schemaColumn == '_file' ) continue;
 			if ( !in_array( $schemaColumn, $columnNames ) ) {
-				die("Error: Field \"$schemaColumn\" is not included in CSV file \"$csvFileName\".");
+print_r($categorySchema);
+				die("Error: Field \"$schemaColumn\" is not included in CSV file \"$csvFilePath\".\n");
 			}
 		}
 
@@ -303,6 +328,10 @@ foreach ($generalSettings as $appName => $appSettings) {
 			// this row.
 			for ($i = 0; $i < count($row); $i++) {
 				$columnName = $columnNames[$i];
+				// Skip this column if it's not in the schema.
+				if ( ! array_key_exists( $columnName, $categorySchema ) ) {
+					continue;
+				}
 				$columnType = $categorySchema[$columnName]['fieldType'];
 				$curValue = $row[$i];
 				if ( $columnType == "Name") {
@@ -313,9 +342,12 @@ foreach ($generalSettings as $appName => $appSettings) {
 					$hasEntityField = 1;
 				}
 
-				// Store every value in the $gAllValues array,
-				// in case something points to it.
-				$gAllValues[$category][$columnName][$curValue] = $gEntityNum;
+				// If this column is pointed to by some property
+				// of type "Entity", store the value in the
+				// $gEntityValues array.
+				if ( array_key_exists( 'pointedTo', $categorySchema[$columnName] ) ) {
+					$gEntityValues[$category][$columnName][$curValue] = $gEntityNum;
+				}
 			}
 
 			if ( !$hasNameField ) {
@@ -412,6 +444,23 @@ foreach ($generalSettings as $appName => $appSettings) {
 		}
 	}
 
+	// We're done now with all the DB tables except "entityProps".
+	// Write all their contents to the file, and clear the variables, to
+	// free up some memory before doing the most memory-intensive part -
+	// creating "entityProps".
+	fwrite( $jsFile, "\ntableContents['$appName'] = {};\n\n");
+	printDBTableContentsAsJS( $jsFile, $appName, 'entities', $gEntitiesDBTable );
+	$gEntitiesDBTable = null;
+	printDBTableContentsAsJS( $jsFile, $appName, 'textProps', $gTextPropsDBTable );
+	//$gTextPropsDBTable = null;
+	printDBTableContentsAsJS( $jsFile, $appName, 'numberProps', $gNumberPropsDBTable );
+	$gNumberPropsDBTable = null;
+	printDBTableContentsAsJS( $jsFile, $appName, 'dateProps', $gDatePropsDBTable );
+	$gDatePropsDBTable = null;
+	printDBTableContentsAsJS( $jsFile, $appName, 'coordProps', $gCoordPropsDBTable );
+
+	$gCoordPropsDBTable = null;
+
 	// Now go through all the stored entity props in order to set values
 	// for the entity props DB table.
 	foreach ($gEntityProps as $category => $entityPropsForCategory) {
@@ -421,8 +470,8 @@ foreach ($generalSettings as $appName => $appSettings) {
 			foreach ($entityPropsForColumn as $id => $entityValues) {
 				foreach ($entityValues as $entityValue) {
 					if ( $entityValue == '' ) continue;
-					if ( array_key_exists( $entityValue, $gAllValues[$connectedCategory][$connectedColumn] ) ) {
-						$entityID = $gAllValues[$connectedCategory][$connectedColumn][$entityValue];
+					if ( array_key_exists( $entityValue, $gEntityValues[$connectedCategory][$connectedColumn] ) ) {
+						$entityID = $gEntityValues[$connectedCategory][$connectedColumn][$entityValue];
 					} else {
 						$entityID = null;
 					}
@@ -431,6 +480,12 @@ foreach ($generalSettings as $appName => $appSettings) {
 			}
 		}
 	}
+
+	printDBTableContentsAsJS( $jsFile, $appName, 'entityProps', $gEntityPropsDBTable );
+
+	// We print the schema data last, even though it would be nice if it
+	// were first, because to set it fully requires knowledge of the
+	// "textProps" and "entityProps" tables.
 
 	// Figure out which columns/fields should be filters.
 	foreach ($schemaData as $category => $categorySchema) {
@@ -471,18 +526,7 @@ foreach ($generalSettings as $appName => $appSettings) {
 			}
 		}
 	}
-
-	// Print it all!
-	print "Printing all app values to JavaScript file...\n";
 	printSchemaDataAsJS( $jsFile, $appName, $schemaData );
-
-	fwrite( $jsFile, "\ntableContents['$appName'] = {};\n\n");
-	printDBTableContentsAsJS( $jsFile, $appName, 'entities', $gEntitiesDBTable );
-	printDBTableContentsAsJS( $jsFile, $appName, 'textProps', $gTextPropsDBTable );
-	printDBTableContentsAsJS( $jsFile, $appName, 'numberProps', $gNumberPropsDBTable );
-	printDBTableContentsAsJS( $jsFile, $appName, 'dateProps', $gDatePropsDBTable );
-	printDBTableContentsAsJS( $jsFile, $appName, 'coordProps', $gCoordPropsDBTable );
-	printDBTableContentsAsJS( $jsFile, $appName, 'entityProps', $gEntityPropsDBTable );
 
 	if ( !is_null( $pagesData ) ) {
 		printPagesDataAsJS( $jsFile, $appName, $pagesData, $generalSettings[$appName]['Directory'] );
