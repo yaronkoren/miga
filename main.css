@@ -143,12 +143,8 @@ div#furtherFilters span.clickable:hover {
 	background: #449E4C;
 }
 
-div#furtherFilters a.compoundFilterName {
+div#furtherFilters span.compoundFilterName {
 	color: #B9EA57;
-}
-
-span.compoundFilterName {
-	color: #75A613;
 }
 
 /* Display format tabs */
@@ -408,7 +404,7 @@ ul.compoundEntityInfo {
 	/*font-size: smaller;*/
 }
 
-ul.compoundEntityInfo a {
+ul.compoundEntityInfo li.entityName a {
 	font-size: medium;
 	font-weight: bold;
 }
@@ -461,8 +457,8 @@ div#poweredBy {
 	text-align: right;
 }
 
-/* "Refresh data" link */
-div#refreshData {
+/* "Last updated" text */
+div#lastUpdated {
 	font-size: smaller;
 	text-align: right;
 }
