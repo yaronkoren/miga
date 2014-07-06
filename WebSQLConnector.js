@@ -551,7 +551,8 @@ WebSQLConnector.prototype.getSQLQuery = function( mdvState, imageProperty, coord
 		fromClause += " JOIN " + textPropsTableName + " pImage";
 		fromClause += " ON e.ID = pImage.SubjectID";
 		whereClause += " AND pImage.Property = '" + imageProperty + "'";
-	} else if ( firstTextField != null ) {
+	}
+	if ( firstTextField != null ) {
 		selectClause += ", pAdditionalText.Object as AdditionalText";
 		fromClause += " JOIN " + textPropsTableName + " pAdditionalText";
 		fromClause += " ON e.ID = pAdditionalText.SubjectID";

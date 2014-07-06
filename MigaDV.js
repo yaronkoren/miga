@@ -1501,8 +1501,9 @@ function displayFilterValues( mdvState, filterValues ) {
 			continue;
 		}
 		// If a value has less than .1% of the items of the most
-		// "popular" value, don't show it.
-		if ( curFilter['numValues'] < ( filterValues[0]['numValues'] * .001 ) ) {
+		// "popular" value, don't show it; and if we've already reached
+		// 600 values, don't show any more.
+		if ( i >= 600 || curFilter['numValues'] < ( filterValues[0]['numValues'] * .001 ) ) {
 			numOtherValues++;
 			numOtherItems += curFilter['numValues'];
 			continue;
