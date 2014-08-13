@@ -9,13 +9,15 @@
  */
 
 if ( count( $argv ) != 2 ) {
-	die( "Error: Script must be called in the form \"SemanticMediaWikiImporter.php settings-file\"\n" );
+	print "Error: Script must be called in the form \"SemanticMediaWikiImporter.php settings-file\"\n" ;
+	exit(1);
 }
 
 $fileName = $argv[1];
 
 if ( ! file_exists( $fileName ) ) {
-	die( "Error: No such file found.\n" );
+	print "Error: No such file found.\n" ;
+	exit(2);
 }
 
 include_once( $fileName );
@@ -56,13 +58,14 @@ do {
 	// @TODO - probably should have a "verbose" mode
 	//print "Getting batch starting at row $offset...";
 	$fullAskURL = $askURL . "&p%5Boffset%5D=$offset";
-	$contents = file_get_contents( $fullAskURL );
+	$contents = trim(file_get_contents( $fullAskURL ));
 	//die($contents);
 
 	if ( $contents != '' ) {
 		fwrite( $file_handle2, $contents );
-	} else {
-		//print " No such batch found; exiting.";
+	} elseif ( $offset == 0 ) {
+		print "Error: No such batch found; exiting.\n";
+		exit(3);
 	}
 	//print "\n";
 	$offset += $rowsPerBatch;
