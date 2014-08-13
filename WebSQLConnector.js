@@ -45,13 +45,12 @@ WebSQLConnector.prototype.errorHandler = function( tx, error ) {
 	}
 }
 
-WebSQLConnector.prototype.loadData = function( allData ) {
+WebSQLConnector.prototype.loadData = function() {
 	androidOnlyAlert("loadData() called");
-	if ( allData == null) return;
 
 	var dbConn = this;
 	// Dummy numbers to get progress bar displayed.
-	dbConn.displayDBLoadingProgress( 0, 0, 10, 1, 1 );
+	dbConn.displayDBLoadingProgress( 0, 1 );
 
 	var entitiesCreationSQL = "CREATE TABLE IF NOT EXISTS " + entitiesTableName + " (ID integer, Name text, Category text)";
 	var textCreationSQL = "CREATE TABLE IF NOT EXISTS " + textPropsTableName + " (SubjectID integer, Property text, Object text)";
@@ -73,7 +72,7 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 				addToMainText('<p>Please make sure that this browser is not in a private browsing mode - that is the most likely cause of this error.<p> \
 <p>If you are using an iPhone or iPad:</p> \
 <ul> \
-<li>For iOS 6 or below, go to Settings > Safari > Private Browsing.)</li> \
+<li>For iOS 6 or below, go to Settings > Safari > Private Browsing.</li> \
 <li>For iPhone with iOS 7 and above, click on the two-square icon at the bottom right of this screen, then click "Private" on the bottom left.</li> \
 <li>For iPad with iOS 7 and above, click on "+" at the top of this screen, then click "Private" at the bottom of the new window.</li> \
 </ul>');
@@ -85,218 +84,127 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 		tx.executeSql(coordinateCreationSQL);
 		tx.executeSql(entityCreationSQL);
 
-		var entityNum = 1;
-		var numEntries = 0;
-		var numTextEntries = 0;
-		var numEntityEntries = 0;
-		for (var categoryName in allData) {
-			var categoryData = allData[categoryName];
-			var categoryHeaders = categoryData[0];
 
-			// Create everything except the "entityProps" table -
-			// that one has to be created afterwards, so that
-			// each relevant entity will already have been
-			// created.
-			for (var i = 1; i < categoryData.length; i++) {
-				var hasNameField = false;
-				var hasEntityField = false;
-				for (var j = 0; j < categoryData[i].length; j++) {
-					var columnName = categoryHeaders[j];
-					var columnDescription = gDataSchema[categoryName]['fields'][columnName];
-					var cellValue = categoryData[i][j];
-					if ( columnDescription == undefined ) {
-						continue;
-					}
-					var columnType = columnDescription['fieldType'];
-					if ( columnType != 'Image URL' && columnType != 'Video URL' && columnType != 'Audio URL' && columnType != 'Document path' && columnType != 'Text' && ( cellValue == null || cellValue == '' ) ) continue;
-					if ( columnType == 'Name' ) {
-						hasNameField = true;
+		// Now go through the data for each table and fill it up.
+		var appName = gAppSettings['Name'];
 
-						var escapedEntityName = cellValue.replace(/^\s+|\s+$/g,'').replace(/'/g, "''");
-						//var escapedEntityName = cellValue.trim().replace(/'/g, "''");
-						var entityInsertionSQL = "INSERT INTO " + entitiesTableName + " (ID, Name, Category) VALUES (" +
-							entityNum + ", '" + escapedEntityName + "', '" + categoryName + "')";
-						tx.executeSql(entityInsertionSQL);
-						continue;
-					} else if ( columnType == 'Entity' ) {
-						hasEntityField = true;
-						// Do nothing.
-					} else if ( columnType == 'Number' ) {
-						insertionSQLStart = "INSERT INTO " + numberPropsTableName + " (SubjectID, Property, Object) VALUES ("
-					} else if ( DataLoader.isDateType(columnType) ) {
-						insertionSQLStart = "INSERT INTO " + datePropsTableName + " (SubjectID, Property, Date) VALUES ("
-					} else if ( columnType == 'Coordinates' ) {
-						insertionSQLStart = "INSERT INTO " + coordinatePropsTableName + " (SubjectID, Property, Latitude, Longitude) VALUES ("
-					} else { // 'Text', 'URL', 'ID', etc.
-						insertionSQLStart = "INSERT INTO " + textPropsTableName + " (SubjectID, Property, Object) VALUES ("
-					}
-					if ( columnDescription['isList'] ) {
-						if ( cellValue == null ) {
-							var objectParts = [];
-						} else {
-							var objectParts = cellValue.split(",");
-						}
-					} else {
-						var objectParts = new Array( cellValue );
-					}
-					objectPartsLength = objectParts.length;
-					for ( var k = 0; k < objectPartsLength; k++ ) {
-						numEntries++;
-						var insertionSQL = insertionSQLStart;
-						insertionSQL += entityNum + ", ";
-						insertionSQL += "'" + columnName.replace(/^\s+|\s+$/g,'').replace(/'/g, "''") + "', ";
-						if ( columnType == 'Entity' ) {
-							// Do nothing.
-						} else if ( DataLoader.isDateType(columnType) ) {
-							var dateStringFromFile = objectParts[k].replace(/^\s+|\s+$/g,'');
-							// If there are no spaces, slashes or dashes, treat
-							// it like a year integer.
-							if ( dateStringFromFile.indexOf( ' ' ) < 0 &&
-							dateStringFromFile.indexOf( '/' ) < 0 &&
-							dateStringFromFile.indexOf( '-' ) < 0 ) {
-								var year = parseInt( dateStringFromFile );
-								dateStr = yearToDBString( year );
-							} else if ( objectParts[k].indexOf( '-' ) > 0 ) {
-								// Safari's Date implementation
-								// can't handle the YYYY-MM-DD
-								// format, so we'll just handle
-								// it ourselves.
-								var dateParts = objectParts[k].split(/[^0-9]/);
-								if ( dateParts.length >= 6 ) {
-									date = new Date( dateParts[0], dateParts[1] - 1, dateParts[2], dateParts[3], dateParts[4], dateParts[5] );
-								} else if ( dateParts.length >= 3 ) {
-									date = new Date( dateParts[0], dateParts[1] - 1, dateParts[2] );
-								}
-								dateStr = date.getDBString();
-							} else {
-								date = new Date( objectParts[k].replace(/^\s+|\s+$/g,'') );
-								// If only a month and day are specified,
-								// the year is set to 2001, for some
-								// reason - make sure that
-								// didn't happen here.
-								if ( date.getFullYear() != 2001 || objectParts[k].indexOf('2001') >= 0 ) {
-									dateStr = date.getDBString();
-								}
-							}
-						
-							if ( dateStr != null ) {
-								insertionSQL += "'" + dateStr + "')";
-								tx.executeSql(insertionSQL);
-							}
-						} else if ( columnType == 'Coordinates' ) {
-							var mdvCoords = new MDVCoordinates();
-							mdvCoords.setFromString( objectParts[k] );
-							if ( mdvCoords.latitude != null ) {
-								insertionSQL += mdvCoords.latitude + ", " + mdvCoords.longitude + ")";
+		var numEntities = tableContents[appName]['entities'].length;
+		var numTextProps = tableContents[appName]['textProps'].length;
+		var numNumberProps = tableContents[appName]['numberProps'].length;
+		var numDateProps = tableContents[appName]['dateProps'].length;
+		var numCoordProps = tableContents[appName]['coordProps'].length;
+		var numEntityProps = tableContents[appName]['entityProps'].length;
+		var numTotalRows = numEntities + numTextProps + numNumberProps + numDateProps + numCoordProps + numEntityProps;
 
-								tx.executeSql(insertionSQL);
-							}
-						} else if ( columnType == 'Number' ) {
-							object = objectParts[k];
-							// parseFloat() can't handle commas.
-							object = object.replace(/,/g, '');
-							// Copied from http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
-							if ( !isNaN( parseFloat( object ) ) && isFinite( object ) ) {
-								insertionSQL += object + ")";
-								tx.executeSql(insertionSQL);
-							}
-						} else { // "Text"
-							if ( objectParts[k] != null ) {
-								numTextEntries++;
-								object = "'" + objectParts[k].replace(/^\s+|\s+$/g,'').replace(/'/g, "''") + "'";
-								insertionSQL += object + ")";
-								tx.categoryName = categoryName;
-								tx.rowNum = i;
-								tx.executeSql(insertionSQL, [], function( tx, results ) {
-									// results.insertId is a lifesaver!
-									// It's the only way we can know the
-									// progress of the DB loading.
-									if ( results.insertId % 100 == 0 ) {
-										dbConn.displayDBLoadingProgress( results.insertId, 0, numEntries, numTextEntries, numEntityEntries );
-									}
-								});
-							}
-						}
-					}
+		var curLoadedEntities = 0;
+		var curLoadedTextProps = 0;
+		var curLoadedNumberProps = 0;
+		var curLoadedDateProps = 0;
+		var curLoadedCoordProps = 0;
+		var curLoadedEntityProps = 0;
+
+		for ( var i = 0; i < numEntities; i++ ) {
+			var curRow = tableContents[appName]['entities'][i];
+			if ( curRow.length < 3 ) continue;
+			sql = "INSERT INTO " + entitiesTableName + " (ID, Name, Category) VALUES (" + curRow[0] + ", '" + curRow[1].replace(/'/g, "''") + "', '" + curRow[2].replace(/'/g, "''") + "')";
+			tx.executeSql(sql, [],
+			function (tx, results) {
+				if ( results.insertId % 100 == 0 ) {
+					curLoadedEntities = results.insertId;
+					dbConn.displayDBLoadingProgress( curLoadedEntities + curLoadedTextProps + curLoadedNumberProps + curLoadedDateProps + curLoadedCoordProps + curLoadedEntityProps, numTotalRows );
 				}
-				// If there was no name field, add it to the
-				// 'entities' table without a name.
-				// (If there was no name and no 'entity'
-				// connection, though, we can just ignore it -
-				// it'll never be accessed anyway.)
-				if ( hasEntityField && !hasNameField ) {
-					var entityInsertionSQL = "INSERT INTO " + entitiesTableName + " (ID, Name, Category)" +
-						" VALUES (" + entityNum + ", '', '" + categoryName + "')";
-					tx.executeSql(entityInsertionSQL);
+			},
+			function (tx, error) {
+				displayMainText("<h3>Database error! " + error.message + " (" + sql + ") " + " (code = " + error.code + ").</h3>");
+			});
+		}
+
+		for ( i = 0; i < numTextProps; i++ ) {
+			var curRow = tableContents[appName]['textProps'][i];
+			if ( curRow.length < 3 ) continue;
+			sql = "INSERT INTO " + textPropsTableName + " (SubjectID, Property, Object) VALUES (" + curRow[0] + ", '" + curRow[1].replace(/'/g, "''") + "', '" + curRow[2].replace(/'/g, "''") + "')";
+			tx.executeSql(sql, [],
+			function (tx, results) {
+				// results.insertId is a lifesaver!
+				// It's the only way we can know the
+				// progress of the DB loading.
+				if ( results.insertId % 100 == 0 ) {
+					curLoadedTextProps = results.insertId;
+					dbConn.displayDBLoadingProgress( curLoadedEntities + curLoadedTextProps + curLoadedNumberProps + curLoadedDateProps + curLoadedCoordProps + curLoadedEntityProps, numTotalRows );
 				}
+			},
+			function (tx, error) {
+				displayMainText("<h3>Database error! " + error.message + " (" + sql + ") " + " (code = " + error.code + ").</h3>");
+			});
+		}
 
-				// Store entityNum, i.e. the Subject ID, for
-				// use in creating the entityProps table.
-				// @HACK - we use the "-1" index for it.
-				categoryData[i][-1] = entityNum;
-				entityNum++;
-			}
-		} // end categoryName loop
-
-		// Populate entityProps table.
-		for (var categoryName in allData) {
-			var categoryData = allData[categoryName];
-			var categoryHeaders = categoryData[0];
-			for (var i = 1; i < categoryData.length; i++) {
-				for (var j = 0; j < categoryData[i].length; j++) {
-					var columnName = categoryHeaders[j];
-					var columnDescription = gDataSchema[categoryName]['fields'][columnName];
-					var cellValue = categoryData[i][j];
-					if ( columnDescription == undefined ) {
-						continue;
-					}
-					var columnType = columnDescription['fieldType'];
-					if ( columnType != 'Entity' ) {
-						continue;
-					}
-
-					var insertionSQLStart = "INSERT INTO " + entityPropsTableName + " (SubjectID, Property, ObjectID, ObjectName) VALUES ("
-					var insertionSQL = insertionSQLStart;
-					insertionSQL += categoryData[i][-1] + ", ";
-					insertionSQL += "'" + columnName.replace(/^\s+|\s+$/g,'').replace(/'/g, "''") + "', ";
-					if ( columnDescription['isList'] ) {
-						if ( cellValue == null ) {
-							var objectParts = [];
-						} else {
-							var objectParts = cellValue.split(",");
-						}
-					} else {
-						var objectParts = new Array( cellValue );
-					}
-					objectPartsLength = objectParts.length;
-					for ( var k = 0; k < objectPartsLength; k++ ) {
-						numEntityEntries++;
-						// special handling - easier to just have this function do everything, since SQL calls
-						// are asynchronous - a "getEntityID()" function would have been difficult to achieve.
-						object = objectParts[k].replace(/^\s+|\s+$/g,'').replace(/'/g, "''");
-						var parentCategory = columnDescription['connectorTable'];
-						var parentCategoryField = columnDescription['connectorField'];
-						var parentCategoryFieldType = gDataSchema[parentCategory]['fields'][parentCategoryField]['fieldType'];
-						if ( parentCategoryFieldType == 'Name' ) {
-							addEntityRowSQL = insertionSQL + '(SELECT ID FROM ' + entitiesTableName +
-								" WHERE Name = '" + object + "' AND Category = '" + parentCategory + "'), '" + object + "')";
-						} else {
-							// We'll assume it's an ID or Text type, both
-							// contained in textProps
-							addEntityRowSQL = insertionSQL + '(SELECT SubjectID FROM ' + textPropsTableName +
-								" WHERE Property = '" + parentCategoryField + "' AND Object = '" + object + "'), '" + object + "')";
-						}
-						tx.executeSql(addEntityRowSQL, [], function( tx, results ) {
-							var rowNum = numTextEntries + results.insertId;
-							if ( rowNum % 100 == 0 ) {
-								dbConn.displayDBLoadingProgress( numTextEntries, results.insertId, numEntries, numTextEntries, numEntityEntries );
-							}
-						});
-
-					}
+		for ( i = 0; i < numNumberProps; i++ ) {
+			var curRow = tableContents[appName]['numberProps'][i];
+			if ( curRow.length < 3 ) continue;
+			sql = "INSERT INTO " + numberPropsTableName + " (SubjectID, Property, Object) VALUES (" + curRow[0] + ", '" + curRow[1].replace(/'/g, "''") + "', '" + curRow[2] + "')";
+			tx.executeSql(sql, [],
+			function (tx, results) {
+				if ( results.insertId % 100 == 0 ) {
+					curLoadedNumberProps = results.insertId;
+					dbConn.displayDBLoadingProgress( curLoadedEntities + curLoadedTextProps + curLoadedNumberProps + curLoadedDateProps + curLoadedCoordProps + curLoadedEntityProps, numTotalRows );
 				}
-			}
-		} // end categoryName loop
+			},
+			function (tx, error) {
+				displayMainText("<h3>Database error! " + error.message + " (" + sql + ") " + " (code = " + error.code + ").</h3>");
+			});
+		}
+
+		for ( i = 0; i < numDateProps; i++ ) {
+			var curRow = tableContents[appName]['dateProps'][i];
+			if ( curRow.length < 3 ) continue;
+			sql = "INSERT INTO " + datePropsTableName + " (SubjectID, Property, Date) VALUES (" + curRow[0] + ", '" + curRow[1].replace(/'/g, "''") + "', " + curRow[2] + ")";
+			tx.executeSql(sql, [],
+			function (tx, results) {
+				if ( results.insertId % 100 == 0 ) {
+					curLoadedDateProps = results.insertId;
+					dbConn.displayDBLoadingProgress( curLoadedEntities + curLoadedTextProps + curLoadedNumberProps + curLoadedDateProps + curLoadedCoordProps + curLoadedEntityProps, numTotalRows );
+				}
+			},
+			function (tx, error) {
+				displayMainText("<h3>Database error! " + error.message + " (" + sql + ") " + " (code = " + error.code + ").</h3>");
+			});
+		}
+
+		for ( i = 0; i < numCoordProps; i++ ) {
+			var curRow = tableContents[appName]['coordProps'][i];
+			if ( curRow.length < 4 ) continue;
+			sql = "INSERT INTO " + coordinatePropsTableName + " (SubjectID, Property, Latitude, Longitude) VALUES (" + curRow[0] + ", '" + curRow[1] + "', " + curRow[2] + ", " + curRow[3] + ")";
+			tx.executeSql(sql, [],
+			function (tx, results) {
+				if ( results.insertId % 100 == 0 ) {
+					curLoadedCoordProps = results.insertId;
+					dbConn.displayDBLoadingProgress( curLoadedEntities + curLoadedTextProps + curLoadedNumberProps + curLoadedDateProps + curLoadedCoordProps + curLoadedEntityProps, numTotalRows );
+				}
+			},
+			function (tx, error) {
+				displayMainText("<h3>Database error! " + error.message + " (\"" + sql + "\") " + " (code = " + error.code + ").</h3>");
+			});
+		}
+
+		for ( i = 0; i < numEntityProps; i++ ) {
+			var curRow = tableContents[appName]['entityProps'][i];
+			// Single quotes go around ObjectID as well, to handle
+			// the case of blank values.
+			sql = "INSERT INTO " + entityPropsTableName + " (SubjectID, Property, ObjectID, ObjectName) VALUES (" + curRow[0] + ", '" + curRow[1].replace(/'/g, "''") + "', '" + curRow[2] + "', '" + curRow[3].replace(/'/g, "''") + "')";
+			tx.executeSql(sql, [],
+			function (tx, results) {
+				if ( results.insertId % 100 == 0 ) {
+					curLoadedEntityProps = results.insertId;
+					dbConn.displayDBLoadingProgress( curLoadedEntities + curLoadedTextProps + curLoadedNumberProps + curLoadedDateProps + curLoadedCoordProps + curLoadedEntityProps, numTotalRows );
+				}
+			},
+			function (tx, error) {
+				displayMainText("<h3>Database error! " + error.message + " (\"" + sql + "\") " + " (code = " + error.code + ").</h3>");
+			});
+		}
+
+		// We're done with "tableContents"! Wipe out this huge array.
+		tableContents = null;
 
 		// Why call loadDataIfNecessary()? So that the actual display
 		// will only happen after the the database is loaded - i.e.,
@@ -307,23 +215,23 @@ WebSQLConnector.prototype.loadData = function( allData ) {
 	});
 }
 
-WebSQLConnector.prototype.loadDataIfNecessary = function( allData ) {
+WebSQLConnector.prototype.loadDataIfNecessary = function() {
 	var dbConn = this;
 	this.db.transaction(function (tx) {
 		var selectSQL = 'SELECT ID FROM ' + entitiesTableName + ' LIMIT 1';
 		tx.executeSql(selectSQL, [],
 			function (tx, results) {
-				// Do nothing - it's already loaded.
+				// Time to do the actual display.
 				setDisplayFromURL();
 			},
 			function (tx, error) {
-				dbConn.loadData( allData );
+				dbConn.loadData();
 			}
 		);
 	});
 }
 
-WebSQLConnector.prototype.displayItem = function( itemID, itemName ) {
+WebSQLConnector.prototype.displayItem = function( mdvState, itemID, itemName ) {
 	var itemName = null;
 	var dbConn = this;
 	this.db.transaction(function (tx) {
@@ -340,18 +248,18 @@ WebSQLConnector.prototype.displayItem = function( itemID, itemName ) {
 				function (tx, results) {
 					itemName = results.rows.item(0)['Name'];
 					gCurCategory = results.rows.item(0)['Category'];
-					var mdvState = new MDVState();
 					mdvState.categoryName = gCurCategory;
 					mdvState.itemName = itemName;
 					displayTitle( mdvState );
 					displayCategoryAndSelectedFiltersList( mdvState );
 
-					displayItemTitle( itemName );
-					displaySearchIcon( gCurCategory );
+					displayItemHeader( mdvState );
+					displayTopSearchInput( mdvState );
 				}
 			);
 		} else {
-			displayItemTitle( itemName );
+			mdvState.itemName = itemName;
+			displayItemHeader( mdvState );
 		}
 
 		var selectSQL = 'SELECT Property, ObjectID, ObjectName AS Object' +
@@ -460,25 +368,11 @@ WebSQLConnector.prototype.displayItem = function( itemID, itemName ) {
 	});
 }
 
-WebSQLConnector.prototype.displayDBLoadingProgress = function( textEntriesLoaded, entityEntriesLoaded, totalEntries, totalTextEntries, totalEntityEntries ) {
-	// The math here is somewhat complex - we use the progress of
-	// text entries as a proxy for overall progress of non-entity
-	// entries, since it's simpler to keep track of just one DB table.
-	// Hopefully there will never be a data set with no text fields.
-
-	// The parseInt() call is needed for Opera, for some reason.
-	var totalNonEntityEntries = parseInt( totalEntries - totalEntityEntries );
-	var nonEntityEntriesLoaded = totalNonEntityEntries * ( textEntriesLoaded / totalTextEntries );
-
-	// Adding an entity entry takes about 5-10 times as long as adding
-	// a non-entity entry, sadly, due to the DB lookup time needed for
-	// entity entries. We factor that in when calculating the current
-	// progress.
-	var currentProgress = nonEntityEntriesLoaded + (7 * entityEntriesLoaded);
-	var totalProgressNeeded = totalNonEntityEntries + (7 * totalEntityEntries);
-	var percentage = Math.ceil(100 * currentProgress / totalProgressNeeded);
+WebSQLConnector.prototype.displayDBLoadingProgress = function( entriesLoaded, totalEntries ) {
+	var percentage = Math.ceil(100 * entriesLoaded / totalEntries);
 	var msg = "<p>Loading data into local database... " + percentage + "% complete.</p>\n";
-	msg += '<progress value="' + percentage + '" max="100">';
+	msg += '<progress value="' + percentage + '" max="100" />';
+	msg += "<p>(Once the data is loaded, it will be available whenever you go to this URL, even if you go offline or after you shut off your computer or device.)</p>";
 	displayMainText( msg );
 }
 
@@ -627,22 +521,38 @@ WebSQLConnector.prototype.getSQLQuery = function( mdvState, imageProperty, coord
 			whereClause += " AND " + secondaryPropertiesTableAlias + ".Property = '" + secondaryProperty + "'";
 			whereClause += " AND " + objectField + " = '" + escapedPropValue + "'";
 		} else {
-			whereClause += " AND " + objectField + " = '" + escapedPropValue + "'";
+			// Regular text.
+			// If this contains a "form feed" character, it's an
+			// array - split it up into values, and do an OR on
+			// each one.
+			var obscureChar = decodeURI('%0C');
+			if ( escapedPropValue.indexOf(obscureChar) > -1 ) {
+				whereClause += " AND " + objectField + " IN ('";
+				var propValuesArray = escapedPropValue.split(obscureChar);
+				var numPropValueParts = propValuesArray.length;
+				for ( propValuePartNum = 0; propValuePartNum < numPropValueParts; propValuePartNum++ ) {
+					if ( propValuePartNum > 0 ) {
+						whereClause += "', '";
+					}
+					whereClause += propValuesArray[propValuePartNum];
+				}
+				whereClause += "')";
+			} else {
+				whereClause += " AND " + objectField + " = '" + escapedPropValue + "'";
+			}
 		}
 		if ( filterType != 'Compound' ) {
 			whereClause += " AND " + tableAlias + ".Property = '" + filterName + "'";
 		}
 	}
 
-//imageProperty = null;
-//firstTextField = null;
-//firstEntityField = null;
 	if ( imageProperty != null ) {
 		selectClause += ", pImage.Object as ImageURL";
 		fromClause += " JOIN " + textPropsTableName + " pImage";
 		fromClause += " ON e.ID = pImage.SubjectID";
 		whereClause += " AND pImage.Property = '" + imageProperty + "'";
-	} else if ( firstTextField != null ) {
+	}
+	if ( firstTextField != null ) {
 		selectClause += ", pAdditionalText.Object as AdditionalText";
 		fromClause += " JOIN " + textPropsTableName + " pAdditionalText";
 		fromClause += " ON e.ID = pAdditionalText.SubjectID";
@@ -736,7 +646,6 @@ WebSQLConnector.prototype.getSQLQuery = function( mdvState, imageProperty, coord
 		groupByClause = " GROUP BY " + objectField;
 	}
 	var selectSQL = selectClause + " FROM " + fromClause + whereClause + groupByClause + orderByClause;
-	//alert(selectSQL);
 	return selectSQL;
 }
 
@@ -791,8 +700,12 @@ WebSQLConnector.prototype.displayItems = function( mdvState, imageProperty, coor
 	});
 }
 
-WebSQLConnector.prototype.displayFilterValues = function( mdvState ) {
+WebSQLConnector.prototype.displayFilterValues = function( origMDVState ) {
 	var dbConn = this;
+	var mdvState = origMDVState.clone();
+	if ( mdvState.useSearchForm ) {
+		mdvState.selectedFilters = [];
+	}
 	this.db.transaction(function (tx) {
 		var selectSQL = dbConn.getSQLQuery( mdvState );
 		tx.executeSql(selectSQL, [],
@@ -839,7 +752,7 @@ WebSQLConnector.prototype.displayFilterValues = function( mdvState ) {
 						filterValues.push( curFilter );
 					}
 				}
-				displayFilterValues( mdvState, filterValues );
+				displayFilterValues( origMDVState, filterValues );
 			},
 			dbConn.errorHandler
 		);

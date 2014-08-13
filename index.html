@@ -7,6 +7,7 @@
 <script type="text/javascript" src="MDVCoordinates.js"></script>
 <script type="text/javascript" src="MDVState.js"></script>
 <script type="text/javascript" src="DataLoader.js"></script>
+<script type="text/javascript" src="migaData.js"></script>
 <script type="text/javascript" src="WebSQLConnector.js"></script>
 <script type="text/javascript" src="MigaDV.js"></script>
 <link type="text/css" rel="stylesheet" href="main.css" media="screen"></link> 
@@ -14,22 +15,22 @@
 </head>
 <body>
 <div id="fullWrapper">
-	<div id="logoAndIcons">
+	<div id="header">
 		<div id="logo"></div>
-		<div id="navIcons">
-			<span id="searchIcon"></span>
+		<div id="navBar">
+			<span id="topSearchInput"></span>
 		</div>
+		<div id="title"></div>
 	</div>
-	<div id="title"></div>
-	<div id="categoryAndSelectedFilters"></div>
-	<br class="separator" />
+	<div id="furtherFiltersWrapper"></div>
 	<div id="mainWrapper">
-		<div id="furtherFiltersWrapper"></div>
+		<div id="categoryAndSelectedFilters"></div>
+		<div id="pageTitle"></div>
 		<div id="resultsMain"></div>
 		<div id="searchInputWrapper"></div>
-		<div id="searchInputWrapper"></div>
+		<div id="footer"></div>
 		<div id="poweredBy"></div>
-		<div id="refreshData"></div>
+		<div id="lastUpdated"></div>
 	</div>
 </div>
 </body>

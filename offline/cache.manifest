@@ -1,4 +1,5 @@
 CACHE MANIFEST
+# Miga 2.0 - 2014-7-9
 CACHE:
 # JavaScript files
 ../DataLoader.js
@@ -10,23 +11,27 @@ CACHE:
 ../WebSQLConnector.js
 # 3rd-party JavaScript files
 ../libs/jquery-1.9.0.min.js
-../libs/Viewer.js/ODFViewerPlugin.js
-../libs/Viewer.js/pdf.js
-../libs/Viewer.js/PDFViewerPlugin.js
-../libs/Viewer.js/pdf.worker.js
-../libs/Viewer.js/PluginLoader.js
-../libs/Viewer.js/TextLayerBuilder.js
-../libs/Viewer.js/viewer.js
-../libs/Viewer.js/webodf.js
+# Temporarily commented out Viewer.js files - this may get replaced 
+# with PDF.js
+#../libs/Viewer.js/ODFViewerPlugin.js
+#../libs/Viewer.js/pdf.js
+#../libs/Viewer.js/PDFViewerPlugin.js
+#../libs/Viewer.js/pdf.worker.js
+#../libs/Viewer.js/PluginLoader.js
+#../libs/Viewer.js/TextLayerBuilder.js
+#../libs/Viewer.js/viewer.js
+#../libs/Viewer.js/webodf.js
 # CSS
 ../main.css
 # 3rd-party CSS
-../libs/Viewer.js/example.local.css
-../libs/Viewer.js/PDFViewerPlugin.css
-../libs/Viewer.js/viewer.css
+#../libs/Viewer.js/example.local.css
+#../libs/Viewer.js/PDFViewerPlugin.css
+#../libs/Viewer.js/viewer.css
 # images
 ../images/Ajax-loader.gif
 ../images/miga-search.png
+../images/miga-query.png
+../images/miga-query-light.png
 ../images/Powered-by-Miga.png
 NETWORK:
 # everything else

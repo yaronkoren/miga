@@ -8,12 +8,12 @@
  *
  * @author Yaron Koren
  *
- * @version 1.1
+ * @version 2.0
  */
 
 // Global variables - sorry if this offends anyone. :)
 var gDBRandomString = null;
-var gDataTimestamp = null;
+//var gDataTimestamp = null;
 var gAppSettings = null;
 var gDataSchema = null;
 var gCurCategory = null;
@@ -26,6 +26,12 @@ var gURLHash = window.location.hash;
 
 function getURLPath() {
 	return window.location.host + window.location.pathname + window.location.search;
+}
+
+function HTMLEscapeString( str ) {
+	// Bizarrely, JS does not contain an HTML-escaping function, and
+	// jQuery can only do it via the DOM, so we'll just have one here.
+	return str.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;');
 }
 
 function androidOnlyAlert( msg ) {
@@ -104,6 +110,18 @@ function categoryHasStartAndEndTimeFields( categoryName ) {
 }
 
 // This is where the core functionality starts.
+
+function saveDataToLocalStorage() {
+        // Save all the settings data to LocalStorage!
+        var allAppInfo = {};
+        allAppInfo['dbRandomString'] = gDBRandomString;
+        allAppInfo['dataSchema'] = gDataSchema;
+        allAppInfo['appSettings'] = gAppSettings;
+        allAppInfo['pagesInfo'] = gPagesInfo;
+        allAppInfo['dataTimestamp'] = gDataTimestamp;
+
+        localStorage.setItem( 'Miga ' + getURLPath(), JSON.stringify( allAppInfo ) );
+}
 
 function setAllFromAppSettings() {
 	try {
@@ -193,36 +211,41 @@ function setAllFromAppSettings() {
 }
 
 function getSettingsAndLoadData() {
-	// If we need the settings, retrieve them from LocalSettings, if
+	// If we need the settings, retrieve them from LocalStorage, if
 	// they're there.
 	if ( gDataSchema == null ) {
 		var allAppInfoJSON = localStorage.getItem('Miga ' + getURLPath() );
 		if ( allAppInfoJSON != null ) {
 			var allAppInfo = JSON.parse( allAppInfoJSON );
 			gDBRandomString = allAppInfo['dbRandomString'];
-			gDataTimestamp = allAppInfo['dataTimestamp'];
 			gDataSchema = allAppInfo['dataSchema'];
 			gAppSettings = allAppInfo['appSettings'];
 			gPagesInfo = allAppInfo['pagesInfo'];
-			setAllFromAppSettings();
+
+			// gDataTimestamp, unlike the other global variables,
+			// does not come from LocalStorage but rather from
+			// the data JS file. timestampFromLocalStorage is the
+			// value that comes from Local Storage.
+			var timestampFromLocalStorage = allAppInfo['dataTimestamp'];
+			if ( typeof gDataTimestamp !== 'undefined' && timestampFromLocalStorage < gDataTimestamp ) {
+				refreshData();
+			} else {
+				setAllFromAppSettings();
+			}
 		}
 	}
 
 	if ( gAppSettings == null ) {
-		jQuery.get("SettingsReader.php?url=" + getURLPath(), function(json) {
-			gAppSettings = jQuery.parseJSON(json);
+		// If there was no data in LocalStorage, get the data from
+		// the data JS file.
+		DataLoader.getAppSettingsAndSchema();
+		if ( gAppSettings != null ) {
 			setAllFromAppSettings();
-		}).done( function(data) {
-			if ( gDBConn == null ) {
-				return;
-			}
-			androidOnlyAlert("Calling DataLoader.getAndLoadDataIfNecessary()");
-			DataLoader.getAndLoadDataIfNecessary( gAppSettings['Directory'], gAppSettings['Schema file'] );
-			DataLoader.getPagesDataIfNecessary( gAppSettings['Directory'], gAppSettings['Pages file'] );
-		});
+			gDBConn.loadDataIfNecessary();
+			saveDataToLocalStorage();
+		}
 	} else {
-		DataLoader.getAndLoadDataIfNecessary( gAppSettings['Directory'], gAppSettings['Schema file'] );
-		DataLoader.getPagesDataIfNecessary( gAppSettings['Directory'], gAppSettings['Pages file'] );
+		gDBConn.loadDataIfNecessary();
 	}
 }
 
@@ -230,26 +253,26 @@ function getSettingsAndLoadData() {
  * Sets both the header and the document title of the page.
  */
 function displayTitle( mdvState ) {
-	if ( gAppSettings == null ) {
-		// Is this check necessary?
-		getSettingsAndLoadData();
-	} else {
-		var titleText = gAppSettings['Name'];
-		jQuery('#title').html('<a href="#">' + titleText + '</a>');
+	var titleText = gAppSettings['Name'];
+	jQuery('#title').html('<a href="#">' + titleText + '</a>');
 
-		var documentTitleText = gAppSettings['Name'];
-		if ( mdvState == null ) {
-			// Do nothing
-		} else if ( mdvState.categoryName != null ) {
-			//documentTitleText += ": " + mdvState.categoryName;
-			if ( mdvState.itemName != null ) {
-				documentTitleText += ": " + mdvState.itemName;
-			}
-		} else if ( mdvState.pageName != null ) {
-			documentTitleText += ": " + mdvState.pageName;
+	var documentTitleText = gAppSettings['Name'];
+	if ( mdvState == null ) {
+		// Do nothing
+	} else if ( mdvState.useSearchForm ) {
+		documentTitleText += ": Search";
+	} else if ( mdvState.categoryName != null ) {
+		//documentTitleText += ": " + mdvState.categoryName;
+		if ( mdvState.itemName != null ) {
+			documentTitleText += ": " + mdvState.itemName;
 		}
-		document.title = documentTitleText;
+	} else if ( mdvState.pageName == '_start' ) {
+		// Start page - just show the site name.
+	} else if ( mdvState.pageName != null ) {
+		documentTitleText += ": " + mdvState.pageName;
 	}
+	document.title = documentTitleText;
+
 	jQuery('#searchInputWrapper').html(null);
 }
 
@@ -273,10 +296,15 @@ function showCurrentEventsLink( categoryName ) {
 	jQuery('#view-current-' + categoryName).show();
 }
 
-function displayCategorySelector() {
-	displayTitle( null );
-	jQuery('#categoryAndSelectedFilters').html("");
+function blankFiltersInfo() {
 	jQuery('#furtherFiltersWrapper').html("");
+	jQuery('#categoryAndSelectedFilters').hide();
+}
+
+function displayCategorySelector() {
+	blankFiltersInfo();
+	displayTitle( null );
+	jQuery('#topSearchInput').html('');
 
 	var categoryNames = [];
 	for ( categoryName in gDataSchema ) {
@@ -319,11 +347,11 @@ function displayCategorySelector() {
 		for ( pageName in gPagesInfo ) {
 			var mdvState = new MDVState();
 			var curPage = gPagesInfo[pageName];
-			if ( curPage.hasOwnProperty('File') ) {
+			if ( curPage[0] == 'File' ) {
 				//var fileName = curPage['File'];
 				mdvState.pageName = pageName;
-			} else if ( curPage.hasOwnProperty('Category') ) {
-				mdvState.categoryName = curPage['Category'];
+			} else if ( curPage[0] == 'Category' ) {
+				mdvState.categoryName = curPage[1];
 			}
 			msg += listElementHTML( mdvState, pageName, false );
 		}
@@ -353,7 +381,11 @@ function displayCategorySelector() {
 function displayCategoryAndSelectedFiltersList( mdvState ) {
 	var mdvStateForCategory = new MDVState();
 	mdvStateForCategory.categoryName = mdvState.categoryName;
-	var categoryDisplay = '<strong><a href="' + mdvStateForCategory.getURLHash() + '">' + mdvStateForCategory.categoryName + '</a></strong>';
+	if ( mdvState.showSearchFormResults ) {
+		var categoryDisplay = '<strong>' + mdvStateForCategory.categoryName + '</strong>';
+	} else {
+		var categoryDisplay = '<strong><a href="' + mdvStateForCategory.getURLHash() + '">' + mdvStateForCategory.categoryName + '</a></strong>';
+	}
 
 	var filtersDisplay = '<ul id="selectedFilters">';
 	if ( mdvState.currentEventsOnly ) {
@@ -364,23 +396,29 @@ function displayCategoryAndSelectedFiltersList( mdvState ) {
 	for ( var propName in selectedFilters ) {
 		filterNum++;
 		filtersDisplay += "<li>";
-		var propValueDisplay = selectedFilters[propName];
+		var propValueParts = selectedFilters[propName].split(decodeURI('%0C'));
+		var propValueDisplay = '<strong>' + propValueParts.join('</strong> or <strong>') + '</strong>';
+
 		if ( selectedFilters[propName] == '__null' ) {
 			propValueDisplay = "<em>No value</em>";
 		}
 		if ( filterNum > 1 ) { filtersDisplay += '& '; }
-		filtersDisplay += propName + " = <strong>" + propValueDisplay + "</strong> ";
-		var newDBState = mdvState.clone();
-		delete newDBState.selectedFilters[propName];
-		filtersDisplay += '<a href="' + newDBState.getURLHash() + '">[&#10005;]</a>';
+		filtersDisplay += propName + " = " + propValueDisplay;
+		if ( ! mdvState.showSearchFormResults ) {
+			var newDBState = mdvState.clone();
+			delete newDBState.selectedFilters[propName];
+			filtersDisplay += ' <a href="' + newDBState.getURLHash() + '">[&#10005;]</a>';
+		}
 		filtersDisplay += "</li>";
 	}
 	filtersDisplay += "</ul>";
 
+	// Re-show, in case it was hidden.
+	jQuery('#categoryAndSelectedFilters').show();
 	jQuery('#categoryAndSelectedFilters').html( categoryDisplay + filtersDisplay );
 }
 
-function displayAdditionalFilters( mdvState ) {
+function getUnusedFilters( mdvState ) {
 	var categoryHeaders = [];
 	categoryFields = gDataSchema[mdvState.categoryName]['fields'];
 	for ( fieldName in categoryFields ) {
@@ -397,10 +435,15 @@ function displayAdditionalFilters( mdvState ) {
 			continue;
 		}
 
-		if ( mdvState.selectedFilters[filterName] == null || DataLoader.isDateType(filterAttribs['fieldType']) || filterAttribs['fieldType'] == 'Number' ) {
+		if ( mdvState.useSearchForm || mdvState.selectedFilters[filterName] == null || DataLoader.isDateType(filterAttribs['fieldType']) || filterAttribs['fieldType'] == 'Number' ) {
 			furtherFilters.push(filterName);
 		}
 	}
+	return furtherFilters;
+}
+
+function displayAdditionalFilters( mdvState ) {
+	var furtherFilters = getUnusedFilters( mdvState );
 
 	// This code needs to be improved a lot!
 	// We're looking for "connector" categories - categories other than
@@ -417,7 +460,7 @@ function displayAdditionalFilters( mdvState ) {
 
 		for ( fieldName in gDataSchema[categoryName]['fields'] ) {
 			if ( gDataSchema[categoryName]['fields'][fieldName]['fieldType'] == 'Entity' ) {
-				if ( gDataSchema[categoryName]['fields'][fieldName]['connectorTable'] == mdvState.categoryName ) {
+				if ( gDataSchema[categoryName]['fields'][fieldName]['connectedCategory'] == mdvState.categoryName ) {
 					foundMatch = true;
 				}
 			}
@@ -463,7 +506,7 @@ function displayAdditionalFilters( mdvState ) {
 				}
 			} else {
 				if ( isCompoundFilter ) {
-					msg += ' <a href="' + newDBState.getURLHash() + '" class="compoundFilterName">' + filterName.substring( filterColonsLoc + 2 ) + "</a>";
+					msg += ' <span class="clickable compoundFilterName" real-href="' + newDBState.getURLHash() + '">' + filterName.substring( filterColonsLoc + 2 ) + '</span>';
 				} else {
 					msg += ' <span class="clickable" real-href="' + newDBState.getURLHash() + '">' + filterName + "</span>";
 				}
@@ -478,11 +521,11 @@ function displayAdditionalFilters( mdvState ) {
 	}
 }
 
-function displayItem( itemID, itemName ) {
+function displayItem( mdvState, itemID, itemName ) {
 	jQuery('#furtherFiltersWrapper').html("");
 	displayMainText('<ul id="itemValues"></ul>');
 	// This displayItem() function will itself call displayItemValues().
-	gDBConn.displayItem( itemID, itemName );
+	gDBConn.displayItem( mdvState, itemID, itemName );
 }
 
 function listElementHTML( mdvState, internalHTML, isDiv ) {
@@ -531,7 +574,11 @@ function setTrueFilterDisplayFormat( mdvState, hasNumericalVariation ) {
 	} else {
 		if ( mdvState.filterDisplayFormat == null ) {
 			if ( hasNumericalVariation ) {
-				mdvState.filterDisplayFormat = 'number';
+				if ( gAppSettings.hasOwnProperty('Hide quantity tab') && gAppSettings['Hide quantity tab'] == 'true' ) {
+					mdvState.filterDisplayFormat = 'alphabetical';
+				} else {
+					mdvState.filterDisplayFormat = 'number';
+				}
 			} else {
 				mdvState.filterDisplayFormat = 'alphabetical';
 			}
@@ -541,7 +588,15 @@ function setTrueFilterDisplayFormat( mdvState, hasNumericalVariation ) {
 
 
 function displayFilterFormatTabs( mdvState ) {
+	// If we're supposed to hide the quantity/number tab, it means no
+	// tabs will be shown - just exit. If the display ever had more than
+	// two tabs, though, this would have to change.
+	if ( gAppSettings.hasOwnProperty('Hide quantity tab') && gAppSettings['Hide quantity tab'] == 'true' ) {
+		return;
+	}
+
 	var filterType = mdvState.getDisplayFilterType();
+
 	if ( DataLoader.isDateType(filterType) ) {
 		//if ( mdvState.filterDisplayFormat == null ) {
 		//	mdvState.filterDisplayFormat = 'date';
@@ -588,8 +643,8 @@ function displayFilterFormatTabs( mdvState ) {
 }
 
 function pageNavigationHTML( mdvState, numItems, itemsPerPage ) {
-		msg = "<p>Go to page:</p>";
-		msg += '<ul id="pageNumbers">';
+		msg = '<ul id="pageNumbers">';
+		msg += '<li id="pageNumbersLabel">Go to page:</li>';
 		numPages = Math.ceil( numItems / itemsPerPage );
 		if ( mdvState.pageNum == null ) mdvState.pageNum = 1;
 		for ( var curPage = 1; curPage <= numPages; curPage++ ) {
@@ -605,11 +660,93 @@ function pageNavigationHTML( mdvState, numItems, itemsPerPage ) {
 		return msg;
 }
 
-function displayItemsScreen( mdvState ) {
-	displayTitle( mdvState );
-	displayCategoryAndSelectedFiltersList( mdvState );
-	displayAdditionalFilters( mdvState );
+function displaySearchFormInput( mdvState, filterValues ) {
+	var msg = '';
+	var len = filterValues.length;
+	for (var i = 0; i < len; i++) {
+		var curFilter = filterValues[i];
+		// 'numValues' is really the number of *items*, and 'filterName'
+		// is really the filter *value*... oh well.
+		var numValues = curFilter['numValues'];
+		if ( numValues == 0 ) continue;
+		var filterValue = curFilter['filterName'];
+		if ( filterValue == null ) {
+			continue;
+		}
+		var filterName = mdvState.displayFilter;
+		var selectedValuesForCurFilter = [];
+		if ( mdvState.selectedFilters.hasOwnProperty(filterName) ) {
+			selectedValuesForCurFilter = mdvState.selectedFilters[filterName].split(decodeURI('%0C'));
+		}
+		msg += ' <span class="searchFormCheckbox"><label><input type="checkbox" class="searchFormCheckbox" filtername="' + filterName + '" filtervalue="' + filterValue + '"';
+		var checked = ( jQuery.inArray( filterValue, selectedValuesForCurFilter ) > -1 );
+		if ( checked ) { msg += ' checked'; }
+		var escapedFilterValue = HTMLEscapeString( filterValue );
+		msg += ' />' + escapedFilterValue + '</label></span>';
+	}
+	jQuery('#searchFormInput-' + mdvState.displayFilter.replace(' ', '-')).html(msg);
+}
 
+function displaySearchForm( mdvState ) {
+	var categorySchema = gDataSchema[mdvState.categoryName]['fields'];
+	displayTitle( mdvState );
+	blankFiltersInfo();
+	var msg = "<h1>Search</h1>\n";
+	msg += "<form>\n";
+	var allFilters = getUnusedFilters( mdvState );
+	msg += '<div id="searchInputs">';
+	for ( var i = 0; i < allFilters.length; i++ ) {
+		var filterName = allFilters[i];
+
+		// For now, we only search on fields of type Text or Entity.
+		var filterType = categorySchema[filterName]['fieldType'];
+		if ( filterType != 'Text' && filterType != 'Entity' ) {
+			continue;
+		}
+
+		msg += '<div class="searchFormInput">';
+		msg += '<h2>' + filterName + "</h2>\n";
+		msg += '<div id="searchFormInput-' + filterName.replace(' ', '-') + '">';
+		var newMDVState = mdvState.clone();
+		newMDVState.displayFilter = filterName;
+		gDBConn.displayFilterValues( newMDVState );
+		msg += "</div>";
+		msg += "</div>";
+	}
+	msg += "</div>";
+	msg += '<input type="button" value="Search" onclick="handleSubmittedSearchForm(mdvState, this.form)">';
+	msg += "</form>";
+	displayMainText(msg);
+}
+
+function handleSubmittedSearchForm( mdvState, form ) {
+	mdvState.selectedFilters = [];
+	jQuery(".searchFormCheckbox").each( function() {
+		if ( $(this).prop('checked') ) {
+			var filterName = $(this).attr('filtername');
+			var filterValue = $(this).attr('filtervalue');
+			if ( mdvState.selectedFilters.hasOwnProperty(filterName) ) {
+				// Use an obscure character to separate the
+				// values - a "form feed".
+				mdvState.selectedFilters[filterName] += decodeURI('%0C') + filterValue;
+			} else {
+				mdvState.selectedFilters[filterName] = filterValue;
+			}
+		}
+	});
+	window.location = mdvState.getURLHash();
+	mdvState.useSearchForm = false;
+	mdvState.showSearchFormResults = true;
+	window.location = mdvState.getURLHash();
+}
+
+function displaySearchFormResults( mdvState ) {
+	displayCategoryAndSelectedFiltersList( mdvState );
+	getDisplayDetailsAndDisplayItems( mdvState );
+	
+}
+
+function getDisplayDetailsAndDisplayItems( mdvState ) {
 	var imageProperty = null;
 	var firstTextField = null;
 	var firstEntityField = null;
@@ -638,7 +775,14 @@ function displayItemsScreen( mdvState ) {
 		}
 	}
 	gDBConn.displayItems( mdvState, imageProperty, coordinatesProperty, dateProperty, firstTextField, firstEntityField );
-	displaySearchIcon( mdvState.categoryName );
+}
+
+function displayItemsScreen( mdvState ) {
+	displayTitle( mdvState );
+	displayTopSearchInput( mdvState );
+	displayCategoryAndSelectedFiltersList( mdvState );
+	displayAdditionalFilters( mdvState );
+	getDisplayDetailsAndDisplayItems( mdvState );
 }
 
 function displayMap( allItemValues ) {
@@ -897,7 +1041,7 @@ function displayItems( mdvState, allItemValues ) {
 	// If there's just one item, display it right away.
 	if (numItems == 1) {
 		itemValues = allItemValues[0];
-		displayItem( itemValues['SubjectID'], itemValues['SubjectName'] );
+		displayItem( mdvState, itemValues['SubjectID'], itemValues['SubjectName'] );
 		return;
 	}
 
@@ -971,7 +1115,7 @@ function displayItems( mdvState, allItemValues ) {
 		addToMainText( pageNumsHTML );
 		var firstItemToShow = ( ( mdvState.pageNum - 1 ) * itemsPerPage ) + 1;
 		var lastItemToShow = Math.min( itemsPerPage * mdvState.pageNum, numItems );
-		msg = "<p>" + numItems + " results found; showing results <strong>" + firstItemToShow + " - " + lastItemToShow + "</strong>.</p>\n";
+		msg = "<p>" + numItems + " results found; showing <strong>" + firstItemToShow + " - " + lastItemToShow + "</strong>.</p>\n";
 	} else {
 		var firstItemToShow = 1;
 		var lastItemToShow = numItems;
@@ -1002,14 +1146,19 @@ function displayItems( mdvState, allItemValues ) {
 	makeRowsClickable();
 }
 
-function displayItemTitle( itemName ) {
-	jQuery('#furtherFiltersWrapper').html("<h1>" + itemName + "</h1>");
+function displayItemHeader( mdvState ) {
+	jQuery('#pageTitle').html("<h1>" + mdvState.itemName + "</h1>");
+	displayCategoryAndSelectedFiltersList( mdvState );
 }
 
 function linkToItemHTML( itemID, itemName ) {
 	var mdvState = new MDVState();
 	mdvState.itemID = itemID;
-	return '<a href="' + mdvState.getURLHash() + '">' + itemName + '</a>';
+	return '<a href="' + mdvState.getURLHash() + '">' + HTMLEscapeString( itemName ) + '</a>';
+}
+
+function addQueryLinkToString( value, mdvState ) {
+	return '<a class="queryLink" href="' + mdvState.getURLHash() + '">' + value + '</a>';
 }
 
 function displayItemValues( itemValues ) {
@@ -1021,15 +1170,35 @@ function displayItemValues( itemValues ) {
 		var propName = itemValues[i]['Property'];
 		var propType = gDataSchema[gCurCategory]['fields'][propName]['fieldType'];
 		var objectString = itemValues[i]['Object'];
-		if ( itemValues[i].hasOwnProperty('ObjectID') && itemValues[i]['ObjectID'] != null ) {
+		if ( itemValues[i].hasOwnProperty('ObjectID') && itemValues[i]['ObjectID'] != null && itemValues[i]['ObjectID'] != '' ) {
 			objectString = linkToItemHTML( itemValues[i]['ObjectID'], objectString );
+		} else if ( propType == 'Entity' ) {
+			// The type is 'Entity', but there's no page for this
+			// specific entity, and it's considered a filter field,
+			// add a link to query on this value.
+			var isFilter = gDataSchema[gCurCategory]['fields'][propName]['isFilter'];
+			if ( objectString != '' && isFilter ) {
+				var selectedFilters = [];
+				selectedFilters[propName] = objectString;
+				var newMDVState = new MDVState(gCurCategory, selectedFilters);
+				objectString = addQueryLinkToString( objectString, newMDVState );
+			}
 		} else if ( propType == 'ID' ) {
 			// Ignore this field.
 			continue;
 		} else if ( propType == 'Text' ) {
 			// Some text-manipulation - maybe this should be done
 			// for all types.
+			var origObjectString = objectString;
 			objectString = objectString.replace("\n", '<br />');
+			objectString = HTMLEscapeString( objectString );
+			var isFilter = gDataSchema[gCurCategory]['fields'][propName]['isFilter'];
+			if ( objectString != '' && isFilter ) {
+				var selectedFilters = [];
+				selectedFilters[propName] = origObjectString;
+				var newMDVState = new MDVState( gCurCategory, selectedFilters );
+				objectString = addQueryLinkToString( objectString, newMDVState );
+			}
 		} else if ( propType == 'URL' ) {
 			if ( objectString != '' ) {
 				objectString = '<a href="' + objectString + '">' + objectString + '</a>';
@@ -1048,11 +1217,14 @@ function displayItemValues( itemValues ) {
 				// HTML5 audio
 				objectString = '<div style="max-width: 90%"><audio controls><source src="' + objectString + '" /><p>This browser does not support HTML5 audio.</p></audio></div>';
 			}
+		// Viewer.JS stuff temporarily commented out.
+		/*
 		} else if ( propType == 'Document path' ) {
 			if ( objectString != '' ) {
 				// Use Viewer.JS - for either PDF or ODF files
 				objectString = '<p><iframe src="libs/Viewer.js/#../../apps/' + gAppSettings['Name'] + '/' + objectString + '" width="520" height="350" allowfullscreen webkitallowfullscreen></iframe></p>';
 			}
+		*/
 		} else if ( DataLoader.isDateType(propType) ) {
 			objectString = Date.dbStringToDisplayString( objectString );
 		}
@@ -1070,43 +1242,141 @@ function displayItemValues( itemValues ) {
 }
 
 function displayCompoundEntitiesForItem( allEntityValues, dataPerEntity, itemName ) {
-	var curSubjectID = null, prevSubjectID = null;
-	var curCategory = null, prevCategory = null;
-	var msg = "";
+	// Go through the set of entity values multiple times - first, a
+	// bunch of times to get the set of category/property pairs that we'll
+	// be displaying, and then, for each such pair, to find the set of
+	// matching items and display them as a list.
+	// There's no doubt a more efficient way to do this, but this was the
+	// easiest approach I could think of.
+
+	// We go through the categories and properties in gDataSchema so that
+	// they'll appear on the item page in the same order that they appear
+	// in the schema.
 	var len = allEntityValues.length, i;
-	for (i = 0; i < len; i++) {
-		curSubjectID = allEntityValues[i]['SubjectID'];
-		curSubjectName = dataPerEntity[curSubjectID]['Name'];
-		curCategory = dataPerEntity[curSubjectID]['Category'];
-		curProperty = dataPerEntity[curSubjectID]['Property'];
-		if ( curSubjectID != prevSubjectID ) {
-			if ( curCategory == gCurCategory ) {
-				if ( curCategory != prevCategory ) {
-					msg += "<h3>" + curCategory + " that have " + itemName + " as " + curProperty + ":</h3>\n";
+	var categoryPropertyPairs = {};
+	for ( categoryName in gDataSchema ) {
+		for ( fieldName in gDataSchema[categoryName]['fields'] ) {
+			var thisPairAlreadyFound = false;
+			for (i = 0; i < len; i++) {
+				var curSubjectID = allEntityValues[i]['SubjectID'];
+				var curCategory = dataPerEntity[curSubjectID]['Category'];
+				if ( curCategory != categoryName ) {
+					continue;
 				}
-				if ( curSubjectName != '' ) {
-					msg += "<li>" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
+				var curProperties = dataPerEntity[curSubjectID]['Properties'];
+				for ( var j = 0; j < curProperties.length; j++ ) {
+					var curProperty = curProperties[j];
+					if ( curProperty != fieldName ) {
+						continue;
+					}
+					// We're still here - we have a match!
+					if ( ! categoryPropertyPairs.hasOwnProperty( curCategory ) ) {
+						categoryPropertyPairs[curCategory] = {};
+					}
+					categoryPropertyPairs[curCategory][curProperty] = true;
+					// We could do this with a
+					// "break <label>" call
+					// instead - oh well.
+					thisPairAlreadyFound = true;
 				}
-			} else {
-				if ( prevSubjectID != null ) {
-					msg += "</ul>\n";
-				}
-				if ( curCategory != prevCategory ) {
-					msg += "<h3>" + curCategory + "</h3>\n";
-				}
-				msg += "<ul class=\"compoundEntityInfo\">\n";
-				if ( curSubjectName != '' ) {
-					msg += "<li>" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
+				if ( thisPairAlreadyFound ) {
+					break;
 				}
 			}
 		}
-		prevSubjectID = curSubjectID;
-		prevCategory = curCategory;
-		if ( curCategory != gCurCategory ) {
-			msg += '<span class="fieldName">' + allEntityValues[i]['Property'] + ":</span> " + allEntityValues[i]['Object'] + "<br />\n";
+	}
+
+	var msg = "";
+	for ( var selectedCategory in categoryPropertyPairs ) {
+		for ( var selectedProperty in categoryPropertyPairs[selectedCategory] ) {
+			msg += "<h3>" + selectedCategory + " that have " + itemName + " as " + selectedProperty + ":</h3>\n";
+			// We have a separate variable just for the HTML of
+			// this list, so we can exit out, without displaying
+			// any of it, if the list gets too long.
+			var curListMsg = '';
+			if ( gCurCategory == selectedCategory ) {
+				curListMsg += "<div class=\"entitiesList\">";
+			} else {
+				curListMsg += "<ul>\n";
+			}
+			var curSubjectID = null, prevSubjectID = null;
+			var sizeOfList = 0;
+			var maxListSize = 500;
+			// For nameless categories, we're assuming that each
+			// field modifies the set of fields before it - the
+			// same assumption that holds for the set of "further
+			// flters" displayed at the top.
+			// This is probably not a correct assumption in all
+			// cases. @TODO - more work needs to be done here.
+			var cumulativeQueryLinkFilters = [];
+			for (i = 0; i < len; i++) {
+				curSubjectID = allEntityValues[i]['SubjectID'];
+				var curSubjectName = dataPerEntity[curSubjectID]['Name'];
+				curCategory = dataPerEntity[curSubjectID]['Category'];
+				if ( curCategory != selectedCategory ) {
+					continue;
+				}
+				var curProperties = dataPerEntity[curSubjectID]['Properties'];
+				var foundMatchingProperty = false;
+				for ( var j = 0; j < curProperties.length; j++ ) {
+					if ( curProperties[j] == selectedProperty ) {
+						foundMatchingProperty = true;
+					}
+				}
+				if ( !foundMatchingProperty ) {
+					continue;
+				}
+
+				if ( curSubjectID != prevSubjectID ) {
+					sizeOfList++;
+					if ( sizeOfList > maxListSize ) {
+						// Too big! Exit
+						break;
+					}
+					if ( selectedCategory != gCurCategory ) {
+						// Reset.
+						cumulativeQueryLinkFilters = [];
+						curListMsg += "</ul>\n";
+						curListMsg += "<ul class=\"compoundEntityInfo\">\n";
+						curListMsg += "<li class=\"entityName\">" + linkToItemHTML( curSubjectID, curSubjectName ) + "</li>\n";
+					} else {
+						if ( sizeOfList > 1 ) {
+							curListMsg += ", ";
+						}
+						curListMsg += linkToItemHTML( curSubjectID, curSubjectName );
+					}
+				}
+				if ( selectedCategory != gCurCategory ) {
+					var propName = allEntityValues[i]['Property'];
+					var objectString = allEntityValues[i]['Object'];
+					var isFilter = gDataSchema[selectedCategory]['fields'][propName]['isFilter'];
+					if ( objectString != '' && isFilter ) {
+						cumulativeQueryLinkFilters[selectedCategory + '::' + propName] = objectString;
+						var newMDVState = new MDVState( gCurCategory, cumulativeQueryLinkFilters );
+						objectString = addQueryLinkToString( objectString, newMDVState );
+					}
+					curListMsg += '<span class="fieldName">' + propName + ":</span> " + objectString + "<br />\n";
+				}
+				prevSubjectID = curSubjectID;
+			}
+			if ( sizeOfList <= maxListSize ) {
+				if ( gCurCategory == selectedCategory ) {
+					curListMsg += "</div>\n";
+				} else {
+					curListMsg += "</ul>\n";
+				}
+			} else {
+				// Show "error" message, plus a link to the
+				// corresponding filter page for this set.
+				var selectedFilters = [];
+				selectedFilters[selectedProperty] = itemName;
+				var newMDVState = new MDVState( selectedCategory, selectedFilters);
+				curListMsg = "<p><em>Too many items to list; <a href=\"" + newMDVState.getURLHash() + "\">see here</a> for the complete list.</em></p>";
+			}
+			msg += curListMsg;
 		}
 	}
-	msg += "</ul>\n";
+
 	addToMainText( msg );
 }
 
@@ -1118,6 +1388,15 @@ function displayCompoundItemValues( entityValues, itemName ) {
 	var dataPerEntity = {};
 	for (i = 0; i < len; i++) {
 		var entityID = entityValues[i]['SubjectID']
+		// We may or may not have gotten this entity before. If we have,
+		// it means there's more than one property connecting it to
+		// the current item - so just get the new property and add it
+		// to the list.
+		if ( dataPerEntity.hasOwnProperty(entityID) ) {
+			dataPerEntity[entityID]['Properties'].push(entityValues[i]['Property']);
+			continue;
+		}
+
 		if ( compoundEntityIDs == null ) {
 			compoundEntityIDs = entityID;
 		} else {
@@ -1126,7 +1405,10 @@ function displayCompoundItemValues( entityValues, itemName ) {
 		dataPerEntity[entityID] = {};
 		dataPerEntity[entityID]['Category'] = entityValues[i]['Category'];
 		dataPerEntity[entityID]['Name'] = entityValues[i]['Name']
-		dataPerEntity[entityID]['Property'] = entityValues[i]['Property'];
+		// This is an array, because there might be more than one
+		// property pointing between the two entities.
+		dataPerEntity[entityID]['Properties'] = [];
+		dataPerEntity[entityID]['Properties'].push(entityValues[i]['Property']);
 	}
 	if ( compoundEntityIDs != null ) {
 		gDBConn.displayCompoundEntitiesForItem( compoundEntityIDs, dataPerEntity, itemName );
@@ -1135,6 +1417,7 @@ function displayCompoundItemValues( entityValues, itemName ) {
 
 function displayFilterValuesScreen( mdvState ) {
 	displayTitle( mdvState );
+	displayTopSearchInput( mdvState );
 	displayCategoryAndSelectedFiltersList( mdvState );
 	displayAdditionalFilters( mdvState );
 	gDBConn.displayFilterValues( mdvState );
@@ -1160,9 +1443,14 @@ function filterValuesHaveNumericalVariation( filterValues ) {
 }
 
 function displayFilterValues( mdvState, filterValues ) {
+	// If we're in the search form, display something completely different
+	if ( mdvState.useSearchForm ) {
+		displaySearchFormInput( mdvState, filterValues );
+		return;
+	}
+
 	displayMainText('');
 	var msg = "<p>Values for <strong>" + mdvState.displayFilter + "</strong>:</p>\n"
-	addToMainText( msg );
 
 	// This is the 'type' of the filter - String, Number, Date, etc.
 	var filterType = mdvState.getDisplayFilterType();
@@ -1172,7 +1460,7 @@ function displayFilterValues( mdvState, filterValues ) {
 	// Skip over all filter display format stuff if there's only one
 	// filter value.
 	if ( len <= 1 ) {
-		msg = "<div id=\"filterValuesList\" class=\"cells\">\n";
+		msg += "<div id=\"filterValuesList\" class=\"cells\">\n";
 	} else {
 		if ( filterType != 'Number' ) {
 			setTrueFilterDisplayFormat( mdvState, hasNumericalVariation );
@@ -1196,16 +1484,30 @@ function displayFilterValues( mdvState, filterValues ) {
 			}
 		*/
 		}
-		var mainClass = ( mdvState.filterDisplayFormat == 'alphabetical' ) ? 'cells' : 'rows';
-		msg = "<div id=\"filterValuesList\" class=\"" + mdvState.filterDisplayFormat + "Display " + mainClass + "\">\n";
+		var mainClass = ( mdvState.filterDisplayFormat == 'alphabetical' || mdvState.filterDisplayFormat == 'date' ) ? 'cells' : 'rows';
+		msg += "<div id=\"filterValuesList\" class=\"" + mdvState.filterDisplayFormat + "Display " + mainClass + "\">\n";
 
 	}
 
+	// We may show a listing at the end of all the values that were too
+	// infrequent to be listed here, and their total instances.
+	var numOtherValues = 0;
+	var numOtherItems = 0;
 	for (var i = 0; i < len; i++) {
 		var newDBState = mdvState.clone();
 		newDBState.displayFilter = null;
 		var curFilter = filterValues[i];
-		if ( curFilter['numValues'] == 0 ) continue;
+		if ( curFilter['numValues'] == 0 ) {
+			continue;
+		}
+		// If a value has less than .1% of the items of the most
+		// "popular" value, don't show it; and if we've already reached
+		// 600 values, don't show any more.
+		if ( i >= 600 || curFilter['numValues'] < ( filterValues[0]['numValues'] * .001 ) ) {
+			numOtherValues++;
+			numOtherItems += curFilter['numValues'];
+			continue;
+		}
 		var filterName = curFilter['filterName'];
 		if ( filterName == null ) {
 			filterNameDisplay = "<em>No value</em>";
@@ -1215,7 +1517,7 @@ function displayFilterValues( mdvState, filterValues ) {
 			filterNameDisplay = numberRange.toDisplayString();
 			filterHash = filterName.toString();
 		} else {
-			filterNameDisplay = filterName.toString();
+			filterNameDisplay = HTMLEscapeString( filterName.toString() );
 			filterHash = filterName.toString();
 		}
 		var rowDisplay = '<strong>' + filterNameDisplay + "</strong> (" + curFilter['numValues'] + ")";
@@ -1235,18 +1537,34 @@ function displayFilterValues( mdvState, filterValues ) {
 		msg += listElementHTML( newDBState, rowDisplay, true );
 	}
 	msg += "</div>\n";
+	if ( numOtherValues > 0 ) {
+		msg += "<p>There were <strong>" + numOtherValues + "</strong> other values for this field that are not listed here, with <strong>" + numOtherItems + "</strong> instances altogether.<p>";
+	}
 	addToMainText( msg );
 	makeRowsClickable();
 }
 
-function displaySearchIcon( categoryName ) {
-	var newDBState = new MDVState();
-	newDBState.categoryName = categoryName;
-	newDBState.searchString = "";
-	jQuery('#searchIcon').html(' <a href="' + newDBState.getURLHash() + '"><img src="images/miga-search.png" /></a>');
+function displayTopSearchInput( mdvState ) {
+	// Eventually, it would be great to also make use of the current set
+	// of selected filters, i.e. use all of mdvState.
+	var newMDVState = new MDVState();
+	newMDVState.categoryName = mdvState.categoryName;
+	if ( mdvState.searchString != undefined ) {
+		newMDVState.searchString = mdvState.searchString;
+	} else {
+		newMDVState.searchString = "";
+	}
+	var text = '<input id="topSearchText" type="search" value="' + newMDVState.searchString + '" size="10" />' + "\n";
+	jQuery('#topSearchInput').html(text);
+	jQuery('#topSearchText').keypress( function(e) {
+		if (e.which == 13) { // "enter" key
+			newMDVState.searchString = jQuery('#topSearchText').val();
+			window.location = newMDVState.getURLHash();
+		}
+	});
 }
 
-function displaySearchInput( mdvState ) {
+function displayBottomSearchInput( mdvState ) {
 	var text = '<div id="searchInput"><input id="searchText" type="text" value="' + mdvState.searchString + '" />' + "\n" +
 		'<input id="searchButton" type="button" value="Search all ' + mdvState.categoryName + '" /></div>' + "\n";
 	jQuery('#searchInputWrapper').html(text);
@@ -1305,9 +1623,12 @@ function searchResultInContext( searchText, fullText ) {
 }
 
 function displaySearchResultsScreen( mdvState ) {
+	blankFiltersInfo();
 	displayTitle( mdvState );
-	jQuery('#categoryAndSelectedFilters').html();
-	jQuery('#furtherFiltersWrapper').html();
+	displayTopSearchInput( mdvState );
+	// We just need the category name.
+	displayCategoryAndSelectedFiltersList( mdvState );
+
 	if ( mdvState.searchString == '' ) {
 		displayMainText("<h2>Search</h2>");
 	} else {
@@ -1315,7 +1636,7 @@ function displaySearchResultsScreen( mdvState ) {
 		gDBConn.displayNameSearchResults( mdvState );
 		gDBConn.displayValueSearchResults( mdvState );
 	}
-	displaySearchInput( mdvState );
+	displayBottomSearchInput( mdvState );
 }
 
 function displayNameSearchResults( mdvState, searchResults ) {
@@ -1399,14 +1720,26 @@ function displayValueSearchResults( mdvState, searchResults ) {
 }
 
 function displayPage( mdvState ) {
-	displayTitle( mdvState );
-	displayMainText( '<h1>' + mdvState.pageName + '</h1>' );
+	var pageFile;
 
-	var pageFile = gPagesInfo[mdvState.pageName]['File'];
-	var appDirectory = gAppSettings['Directory'];
-	jQuery.get("apps/" + appDirectory + "/" + pageFile, function(text) {
-		addToMainText(text);
-	});
+	// Set class for this page, to allow custom CSS.
+	jQuery('body').attr( 'class', "page-" + mdvState.pageName );
+
+	blankFiltersInfo();
+	// Special handling for start page
+	if ( mdvState.pageName == '_start' ) {
+		jQuery('#header').hide();
+		displayMainText('');
+		pageContents = gAppSettings['Start page'];
+	} else {
+		displayMainText( '<h1>' + mdvState.pageName + '</h1>' );
+		pageContents = gPagesInfo[mdvState.pageName][1];
+	}
+	displayTitle( mdvState );
+
+	jQuery('#topSearchInput').html('');
+
+	addToMainText( pageContents );
 }
 
 function makeRowsClickable() {
@@ -1420,8 +1753,9 @@ function refreshData() {
 	localStorage.removeItem('Miga ' + getURLPath());
 	gAppSettings = null;
 	gDataSchema = null;
+	gDBRandomString = null;
 	// Is there a way to do this without a reload?
-	window.location.reload();
+	//window.location.reload();
 }
 
 function setDisplayFromURL() {
@@ -1431,13 +1765,44 @@ function setDisplayFromURL() {
 	mdvState = new MDVState();
 	mdvState.setFromURLHash( gURLHash );
 
+	//var onStartPage = ( mdvState.pageName == '_start' &&
+	//	gAppSettings.hasOwnProperty('Start page') );
+	jQuery('body').removeAttr( 'class' );
+	jQuery('#pageTitle').html('');
+
+	// Re-show the header, if it might have been hidden for a custom
+	// start page.
+	if ( gAppSettings.hasOwnProperty('Start page') ) {
+		jQuery('#header').show();
+	}
+
+	// Show the custom header and footer, if either exist.
+	if ( gAppSettings.hasOwnProperty('Header file') ) {
+		var headerFileContents = gAppSettings['Header file'];
+		jQuery('#header').html( headerFileContents );
+	}
+
+	if ( gAppSettings.hasOwnProperty('Footer file') ) {
+		var footerFileContents = gAppSettings['Footer file'];
+		jQuery('#footer').html( footerFileContents );
+	}
+
 	if ( mdvState.itemID != null ) {
 		window.scrollTo(0,0);
-		displayItem( mdvState.itemID, null );
+		displayItem( mdvState, mdvState.itemID, null );
 	} else if ( mdvState.pageName != null ) {
-		window.scrollTo(0,0);
-		displayPage( mdvState );
+		if ( mdvState.pageName != '_start' || gAppSettings.hasOwnProperty('Start page') ) {
+			window.scrollTo(0,0);
+			displayPage( mdvState );
+		} else {
+			displayCategorySelector();
+		}
+	} else if ( mdvState.useSearchForm ) {
+		displaySearchForm( mdvState );
+	} else if ( mdvState.showSearchFormResults ) {
+		displaySearchFormResults( mdvState );
 	} else if ( mdvState.categoryName == null ) {
+		// Is this needed?
 		displayCategorySelector();
 	} else if ( mdvState.searchString != null ) {
 		window.scrollTo(0,0);
@@ -1448,27 +1813,11 @@ function setDisplayFromURL() {
 		displayFilterValuesScreen( mdvState );
 	}
 
-	// If we don't have the original timestamp, try getting it again.
-	if ( gDataTimestamp == null ) {
-		var allAppInfoJSON = localStorage.getItem('Miga ' + getURLPath() );
-		if ( allAppInfoJSON != null ) {
-			var allAppInfo = JSON.parse( allAppInfoJSON );
-			gDataTimestamp = allAppInfo['dataTimestamp'];
-		}
-	}
-
 	jQuery('#poweredBy').html('<a href="http://migadv.com"><img src="images/Powered-by-Miga.png" alt="Powered by Miga" /></a>');
 
-	var refreshDataHTML = '<a href="' + window.location + '">Refresh data.</a>';
-	if ( gDataTimestamp != null ) {
-		var curDate = new Date();
-		refreshDataHTML = 'Data was last updated ' + getTimeDifferenceString( gDataTimestamp, curDate.getTime() ) + ' ago. ' + refreshDataHTML;
-	}
-	jQuery('#refreshData').html(refreshDataHTML);
-
-	jQuery("#refreshData a").click( function() {
-		refreshData();
-	});
+	var curDate = new Date();
+	var lastUpdatedHTML = 'Data was last updated ' + getTimeDifferenceString( gDataTimestamp, curDate.getTime() ) + ' ago.';
+	jQuery('#lastUpdated').html(lastUpdatedHTML);
 }
 
 // Poll for URL changes - this is apparently the only way to get URL
