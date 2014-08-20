@@ -21,6 +21,7 @@ var gPagesInfo = null;
 var gDBConn = null;
 var gMapScriptLoaded = false;
 var gURLHash = window.location.hash;
+var gSuppressFilter = new Array();
 
 // Various utility functions that could probably go somewhere else.
 
@@ -192,6 +193,10 @@ function setAllFromAppSettings() {
 			link.href = "apps/" + gAppSettings['Directory'] + "/" + gAppSettings['App icon'];
 		}
 		document.getElementsByTagName('head')[0].appendChild(link);
+	}
+
+	if (gAppSettings.hasOwnProperty('Suppress filter')) {
+		gSuppressFilter = $.trim(gAppSettings['Suppress filter']).split(/\s*,\s*/);
 	}
 
 	// This <meta> tag removes the browser's URL bar at the top and
@@ -484,6 +489,11 @@ function displayAdditionalFilters( mdvState ) {
 		}
 		for ( var i = 0; i < furtherFilters.length; i++ ) {
 			var filterName = furtherFilters[i];
+
+			if (gSuppressFilter.indexOf(filterName) >= 0) {
+				continue;
+			}
+
 			var isCompoundFilter = false;
 			if ( ( filterColonsLoc = filterName.indexOf('::') ) > 0 ) {
 				isCompoundFilter = true;
