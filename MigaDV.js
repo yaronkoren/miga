@@ -21,6 +21,7 @@ var gPagesInfo = null;
 var gDBConn = null;
 var gMapScriptLoaded = false;
 var gURLHash = window.location.hash;
+var gSuppressSearch = new Array();
 
 // Various utility functions that could probably go somewhere else.
 
@@ -192,6 +193,10 @@ function setAllFromAppSettings() {
 			link.href = "apps/" + gAppSettings['Directory'] + "/" + gAppSettings['App icon'];
 		}
 		document.getElementsByTagName('head')[0].appendChild(link);
+	}
+	if (gAppSettings.hasOwnProperty('Suppress search')) {
+		gSuppressSearch = $.trim(gAppSettings['Suppress search']).split(/\s*,\s*/);
+
 	}
 
 	// This <meta> tag removes the browser's URL bar at the top and
