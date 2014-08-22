@@ -808,6 +808,7 @@ WebSQLConnector.prototype.displayValueSearchResults = function( mdvState ) {
 			' FROM ' + entitiesTableName + " e" +
 			' JOIN ' + textPropsTableName + " p ON e.ID = p.SubjectID" +
 			' WHERE e.Category = "' + mdvState.categoryName + '"' +
+			' AND LOWER(p.Property) NOT IN ("' + gSuppressSearch.join('", "').toLowerCase() + '")' +
 			' AND LOWER(p.Object) LIKE "%' + mdvState.searchString.toLowerCase() + '%"';
 		tx.executeSql(selectSQL, [],
 			function (tx, results) {
